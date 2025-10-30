@@ -34,6 +34,9 @@ import Produccion from '../modules/operaciones/Produccion';
 import ReportesAnaliticas from '../modules/administracion/ReportesAnaliticas';
 import GestionUsuarios from '../modules/administracion/GestionUsuarios';
 import Configuracion from '../modules/administracion/Configuracion';
+import RegistroUsuario from '../modules/administracion/RegistroUsuario';
+import { OrionUser, INTERNAL_USERS } from '../data/internalUsers';
+
 
 // --- SVG ICONS (as React components for easier use) ---
 const Icons = {
@@ -76,7 +79,9 @@ const ModuleContent: React.FC<{
     onClose?: () => void;
     visibleModules?: Record<string, boolean>;
     toggleModuleVisibility?: (moduleName: string) => void;
-}> = ({ title, onClose = () => {}, visibleModules, toggleModuleVisibility }) => {
+    users: OrionUser[];
+    onRegisterSuccess: (newUser: OrionUser) => void;
+}> = ({ title, onClose = () => {}, visibleModules, toggleModuleVisibility, users, onRegisterSuccess }) => {
     switch (title) {
         case 'Terceros (CRM)': return <ClientesCRM />;
         case 'Pedidos de Venta': return <PedidosVenta />;
@@ -93,8 +98,10 @@ const ModuleContent: React.FC<{
         case 'Producción': return <Produccion />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
-        case 'Gestión de Usuarios': return <GestionUsuarios />;
+        case 'Gestión de Usuarios': return <GestionUsuarios users={users} />;
         case 'Configuración': return <Configuracion visibleModules={visibleModules} toggleModuleVisibility={toggleModuleVisibility} />;
+        case 'Registro de Usuario': return <RegistroUsuario onRegisterSuccess={onRegisterSuccess} onClose={onClose} />;
+
         
         default: return <p>Contenido para {title} no encontrado.</p>;
     }
@@ -112,7 +119,9 @@ const Window: React.FC<{
     onAnimationEnd: (id: string) => void;
     visibleModules?: Record<string, boolean>;
     toggleModuleVisibility?: (moduleName: string) => void;
-}> = ({ win, onClose, onMinimize, onFocus, onUpdate, isFocused, onAnimationEnd, visibleModules, toggleModuleVisibility }) => {
+    users: OrionUser[];
+    onRegisterSuccess: (newUser: OrionUser) => void;
+}> = ({ win, onClose, onMinimize, onFocus, onUpdate, isFocused, onAnimationEnd, visibleModules, toggleModuleVisibility, users, onRegisterSuccess }) => {
     
     const headerRef = useRef<HTMLDivElement>(null);
 
@@ -189,8 +198,8 @@ const Window: React.FC<{
                     <button onClick={() => onClose(win.id)} title="Cerrar">X</button>
                 </div>
             </div>
-            <div className={`window-content ${win.title === 'Crear Pedido' ? 'no-padding' : ''}`}>
-                 <ModuleContent title={win.title} onClose={() => onClose(win.id)} visibleModules={visibleModules} toggleModuleVisibility={toggleModuleVisibility} />
+            <div className={`window-content ${win.title === 'Crear Pedido' || win.title === 'Registro de Usuario' ? 'no-padding' : ''}`}>
+                 <ModuleContent title={win.title} onClose={() => onClose(win.id)} visibleModules={visibleModules} toggleModuleVisibility={toggleModuleVisibility} users={users} onRegisterSuccess={onRegisterSuccess} />
             </div>
         </div>
     );
@@ -217,6 +226,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const nextZIndex = useRef(100);
     const maxZIndex = windows.reduce((max, w) => Math.max(max, w.zIndex), 0);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [internalUsers, setInternalUsers] = useState<OrionUser[]>([]);
+    const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
+
+
+    // Effect to load/initialize users
+    useEffect(() => {
+        try {
+            const storedUsers = localStorage.getItem(ORION_USERS_STORAGE_KEY);
+            if (storedUsers) {
+                setInternalUsers(JSON.parse(storedUsers));
+            } else {
+                setInternalUsers(INTERNAL_USERS);
+                localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(INTERNAL_USERS));
+            }
+        } catch (error) {
+            console.error("Failed to manage Orion users in localStorage", error);
+            setInternalUsers(INTERNAL_USERS);
+        }
+    }, []);
+
+    const handleRegisterUser = (newUser: OrionUser) => {
+        const updatedUsers = [...internalUsers, newUser];
+        setInternalUsers(updatedUsers);
+        localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    };
+
 
     const allModules = navData.flatMap(pillar => pillar.items);
     const [visibleModules, setVisibleModules] = useState<Record<string, boolean>>(() => {
@@ -677,7 +712,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             
             <main className="main-content">
                  <div className="relative w-full h-full overflow-hidden">
-                    {windows.filter(w => !w.isMinimized).map(win => <Window key={win.id} win={win} onClose={requestCloseWindow} onMinimize={minimizeWindow} onFocus={focusWindow} onUpdate={updateWindow} isFocused={win.zIndex === maxZIndex} onAnimationEnd={handleAnimationEnd} visibleModules={visibleModules} toggleModuleVisibility={toggleModuleVisibility} />)}
+                    {windows.filter(w => !w.isMinimized).map(win => <Window key={win.id} win={win} onClose={requestCloseWindow} onMinimize={minimizeWindow} onFocus={focusWindow} onUpdate={updateWindow} isFocused={win.zIndex === maxZIndex} onAnimationEnd={handleAnimationEnd} visibleModules={visibleModules} toggleModuleVisibility={toggleModuleVisibility} users={internalUsers} onRegisterSuccess={handleRegisterUser} />)}
                  </div>
             </main>
 

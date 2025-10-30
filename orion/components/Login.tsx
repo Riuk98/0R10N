@@ -1,16 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { INTERNAL_USERS } from '../data/internalUsers';
+import RippleEffect from './RippleEffect';
 
 interface LoginProps {
     onLoginSuccess: () => void;
-}
-
-// Type for a single ripple
-interface Ripple {
-    key: number;
-    top: number;
-    left: number;
 }
 
 const SpinnerIcon = () => (
@@ -25,28 +19,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [ripples, setRipples] = useState<Ripple[]>([]);
-
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            const newRipple = {
-                key: Date.now(),
-                left: window.innerWidth / 2,
-                top: window.innerHeight / 2,
-            };
-
-            setRipples(prevRipples => [...prevRipples, newRipple]);
-
-            // Clean up the ripple from the state after the animation is done
-            setTimeout(() => {
-                setRipples(currentRipples => currentRipples.filter(r => r.key !== newRipple.key));
-            }, 15000); // Duration matches the CSS animation
-        }, 4000); // Create a ripple every 1 second
-
-        // Cleanup function to clear the interval when the component unmounts
-        return () => clearInterval(intervalId);
-    }, []); // The empty dependency array ensures this effect runs only once
-
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -70,43 +42,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
      return (
         <>
-            <style>{`
-                .ripple-effect {
-                    position: absolute;
-                    border-radius: 50%;
-                    transform: translate(-50%, -50%);
-                    animation: ripple-animation 15s linear;
-                    box-shadow: 0 0 25px #97b3e9, inset 0 0 25px #97b3e9;
-                }
-
-                @keyframes ripple-animation {
-                    0% {
-                        width: 0;
-                        height: 0;
-                        opacity: 0.65;
-                    }
-                    90% {
-                        width: 4500px;
-                        height: 4500px;
-                        opacity: 0.1;
-                    }
-                    100% {
-                        width: 4500px;
-                        height: 4500px;
-                        opacity: 0;
-                    }
-                }
-            `}</style>
             <div
                 className="h-screen w-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#fffafa] to-[#a7d9f2] relative overflow-hidden"
             >
-                 {ripples.map(ripple => (
-                    <span
-                        key={ripple.key}
-                        className="ripple-effect"
-                        style={{ left: ripple.left, top: ripple.top }}
-                    />
-                ))}
+                 <RippleEffect />
 
                 <div className="w-full max-w-xs z-10" onClick={(e) => e.stopPropagation()}>
                     <div className="bg-white/20 backdrop-blur-[10px] rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] pt-3 px-6 pb-6 space-y-4 border border-white/30">
