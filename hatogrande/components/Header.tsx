@@ -103,7 +103,7 @@ const Header: React.FC = () => {
         <>
         <header className="sticky top-0 z-40 w-full py-3">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="bg-white/80 backdrop-blur-lg rounded-full shadow-lg flex items-center justify-between px-6 py-2 transition-all duration-300 hover:bg-white">
+                <div className="bg-white/60 backdrop-blur-lg rounded-full shadow-lg flex items-center justify-between px-6 py-2 transition-all duration-300 hover:bg-white">
                     {/* Logo */}
                     <div className="flex-shrink-0">
                         <button onClick={() => navigateTo('home')} className="flex items-center transition-transform duration-300 hover:scale-105" title="Ir al Inicio">
