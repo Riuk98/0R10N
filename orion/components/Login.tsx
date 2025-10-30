@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
+import { INTERNAL_USERS } from '../data/internalUsers';
 
 interface LoginProps {
     onLoginSuccess: () => void;
@@ -39,7 +41,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             setTimeout(() => {
                 setRipples(currentRipples => currentRipples.filter(r => r.key !== newRipple.key));
             }, 15000); // Duration matches the CSS animation
-        }, 3000); // Create a ripple every 1 second
+        }, 4000); // Create a ripple every 1 second
 
         // Cleanup function to clear the interval when the component unmounts
         return () => clearInterval(intervalId);
@@ -53,7 +55,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         // Simulating validation with a 2-second delay for UX
         setTimeout(() => {
-            if (username === 'admin' && password === 'admin') {
+            const foundUser = INTERNAL_USERS.find(
+                user => user.username === username && user.password === password
+            );
+
+            if (foundUser) {
                 onLoginSuccess();
             } else {
                 setError('Usuario o contraseña incorrectos.');
@@ -70,7 +76,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     border-radius: 50%;
                     transform: translate(-50%, -50%);
                     animation: ripple-animation 15s linear;
-                    box-shadow: 0 0 8px #97b3e9, inset 0 0 8px #97b3e9;
+                    box-shadow: 0 0 25px #97b3e9, inset 0 0 25px #97b3e9;
                 }
 
                 @keyframes ripple-animation {
