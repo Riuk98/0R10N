@@ -101,13 +101,13 @@ const Header: React.FC = () => {
 
     return (
         <>
-        <header className="bg-white/65 backdrop-blur-lg sticky top-0 z-40 shadow-md transition-all duration-300 hover:bg-white">
+        <header className="sticky top-0 z-40 w-full py-3">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between h-18">
+                <div className="bg-white/80 backdrop-blur-lg rounded-full shadow-lg flex items-center justify-between px-6 py-2 transition-all duration-300 hover:bg-white">
                     {/* Logo */}
                     <div className="flex-shrink-0">
                         <button onClick={() => navigateTo('home')} className="flex items-center transition-transform duration-300 hover:scale-105" title="Ir al Inicio">
-                            <img src="https://i.postimg.cc/kDrPRRWy/Gemini-Generated-Image-s055fas055fas055.png" alt="Hato Grande Logo" className="h-14 w-auto" />
+                            <img src="https://i.postimg.cc/kDrPRRWy/Gemini-Generated-Image-s055fas055fas055.png" alt="Hato Grande Logo" className="h-12 w-auto" />
                         </button>
                     </div>
 
