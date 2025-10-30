@@ -1,0 +1,61 @@
+/* Import Tailwind CSS base styles */
+/* @tailwind base; */
+/* @tailwind components; */
+/* @tailwind utilities; */
+
+/* Global styles applicable to both Hato Grande and Orion */
+body {
+    font-family: 'Poppins', sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue';
+}
+
+/* --- HATO GRANDE E-COMMERCE STYLES --- */
+/* All styles below will only apply to elements inside the .hatogrande-app container */
+.hatogrande-app {
+    /* Hato Grande Color Palette based on user's image */
+    --color-primary: #D9B814;      /* Main Yellow */
+    --color-secondary: #594302;     /* Dark Brown/Olive */
+    --color-accent: #D9A50B;       /* Darker Yellow/Gold */
+    --color-dark: #403434;         /* Dark Gray/Brown for titles */
+    --color-light-gray: #D9D1D0;   /* Light Gray for text on dark backgrounds */
+    --color-text: #403434;         /* Dark Gray/Brown for body text */
+    --color-background: #e5ddc1;   /* Light yellow background */
+    
+    background-color: var(--color-background);
+    color: var(--color-text);
+}
+
+.hatogrande-app h1,
+.hatogrande-app h2,
+.hatogrande-app h3,
+.hatogrande-app h4,
+.hatogrande-app h5,
+.hatogrande-app h6 {
+    font-family: 'Montserrat', sans-serif;
+    color: var(--color-dark);
+}
+
+/* Custom Scrollbar for Hato Grande */
+.hatogrande-app ::-webkit-scrollbar {
+  width: 10px;
+}
+
+.hatogrande-app ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.hatogrande-app ::-webkit-scrollbar-thumb {
+  background: #c7a812; /* A slightly darker shade of primary for better contrast */
+  border-radius: 5px;
+}
+
+.hatogrande-app ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary);
+}
+
+
+/* --- ORION ERP STYLES --- */
+/* Styles for Orion are managed within its own components or can be added here under the .orion-app selector */
+.orion-app {
+    /* Define a base dark background for the Orion part of the app */
+    background-color: #051d40;
+}
