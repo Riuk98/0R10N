@@ -6,7 +6,7 @@ const Footer: React.FC = () => {
 
     return (
         <footer className="text-[var(--color-text)] pt-6 pb-3">
-            <div className="container mx-auto max-w-4xl bg-white p-4 sm:p-6 rounded-lg shadow-lg">
+            <div className="container mx-auto max-w-6xl bg-white p-4 sm:p-6 rounded-lg shadow-lg">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Left Column */}
                     <div className="space-y-4">
