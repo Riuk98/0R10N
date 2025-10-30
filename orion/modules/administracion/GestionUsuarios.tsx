@@ -1,4 +1,5 @@
 import React from 'react';
+import { INTERNAL_USERS } from '../../data/internalUsers';
 
 const GestionUsuarios: React.FC = () => {
     return (
@@ -17,25 +18,21 @@ const GestionUsuarios: React.FC = () => {
                 <table className="w-full text-sm text-left text-[var(--text-secondary)]">
                     <thead className="text-xs uppercase bg-[var(--bg-main)] text-[var(--text-primary)]">
                         <tr>
-                            <th scope="col" className="py-3 px-6">Nombre</th>
+                            <th scope="col" className="py-3 px-6">Nombre de Usuario</th>
                             <th scope="col" className="py-3 px-6">Email</th>
                             <th scope="col" className="py-3 px-6">Rol</th>
                             <th scope="col" className="py-3 px-6">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr className="border-b border-[var(--border-color)]">
-                            <td className="py-4 px-6 font-medium text-[var(--text-primary)]">Martha Milena</td>
-                            <td className="py-4 px-6">martha.milena@hatogrande.com</td>
-                            <td className="py-4 px-6">Administrador</td>
-                            <td className="py-4 px-6"><a href="#" className="font-medium text-[var(--secondary-green)] hover:opacity-80">Editar</a></td>
-                        </tr>
-                        <tr className="border-b border-[var(--border-color)]">
-                            <td className="py-4 px-6 font-medium text-[var(--text-primary)]">Carlos Vélez</td>
-                            <td className="py-4 px-6">carlos.velez@hatogrande.com</td>
-                            <td className="py-4 px-6">Vendedor</td>
-                             <td className="py-4 px-6"><a href="#" className="font-medium text-[var(--secondary-green)] hover:opacity-80">Editar</a></td>
-                        </tr>
+                        {INTERNAL_USERS.map(user => (
+                            <tr key={user.id} className="border-b border-[var(--border-color)]">
+                                <td className="py-4 px-6 font-medium text-[var(--text-primary)] capitalize">{user.username}</td>
+                                <td className="py-4 px-6">{`${user.username}@orion.system`}</td>
+                                <td className="py-4 px-6">{user.role}</td>
+                                <td className="py-4 px-6"><a href="#" className="font-medium text-[var(--secondary-green)] hover:opacity-80">Editar</a></td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
