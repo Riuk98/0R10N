@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Switch from './Switch'; // Import the new Switch component
 
@@ -13,6 +11,7 @@ interface WindowState {
   isMaximized: boolean;
   zIndex: number;
   animationState?: 'opening' | 'closing-for-close';
+  props?: Record<string, any>; // To pass props to window components
 }
 
 // Import all the new module components
@@ -35,6 +34,7 @@ import ReportesAnaliticas from '../modules/administracion/ReportesAnaliticas';
 import GestionUsuarios from '../modules/administracion/GestionUsuarios';
 import Configuracion from '../modules/administracion/Configuracion';
 import RegistroUsuario from '../modules/administracion/RegistroUsuario';
+import GestionPermisos from '../modules/administracion/GestionPermisos';
 import { OrionUser, INTERNAL_USERS } from '../data/internalUsers';
 
 
@@ -72,35 +72,56 @@ const navData = [
     { title: "Administración", icon: Icons.Admin, items: ["Reportes y Analíticas", "Gestión de Usuarios", "Configuración"] },
 ];
 
+const moduleNameMapping: { [key: string]: string } = {
+    "Terceros": "Terceros (CRM)",
+    "Pedidos de venta": "Pedidos de Venta",
+    "Soporte": "Soporte (PQR)",
+    "Cuentas por cobrar": "Cuentas por Cobrar",
+    "Cuentas por pagar": "Cuentas por Pagar",
+    "Contabilidad": "Contabilidad",
+    "Nomina": "Nómina",
+    "Inventario": "Inventario",
+    "Compras": "Compras",
+    "Produccion": "Producción",
+    "Reportes y analiticas": "Reportes y Analíticas",
+    "Gestion de usuarios": "Gestión de Usuarios",
+    "Configuracion": "Configuración"
+};
+
+const invertedModuleNameMapping: { [key: string]: string } = {};
+Object.keys(moduleNameMapping).forEach(key => {
+    invertedModuleNameMapping[moduleNameMapping[key]] = key;
+});
+
 
 // New component to render module content
 const ModuleContent: React.FC<{ 
     title: string; 
     onClose?: () => void;
-    visibleModules?: Record<string, boolean>;
-    toggleModuleVisibility?: (moduleName: string) => void;
-    users: OrionUser[];
-    onRegisterSuccess: (newUser: OrionUser) => void;
-}> = ({ title, onClose = () => {}, visibleModules, toggleModuleVisibility, users, onRegisterSuccess }) => {
+    permissions?: Record<string, boolean>;
+    [key: string]: any; // To allow passing arbitrary props
+}> = ({ title, onClose = () => {}, permissions, ...props }) => {
     switch (title) {
-        case 'Terceros (CRM)': return <ClientesCRM />;
-        case 'Pedidos de Venta': return <PedidosVenta />;
+        case 'Terceros (CRM)': return <ClientesCRM permissions={permissions} />;
+        case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
         case 'Soporte (PQR)': return <SoportePQR />;
-        case 'Crear Pedido': return <CrearPedido onClose={onClose} />;
+        case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} />;
 
         case 'Cuentas por Cobrar': return <CuentasCobrar />;
         case 'Cuentas por Pagar': return <CuentasPagar />;
         case 'Contabilidad': return <Contabilidad />;
         case 'Nómina': return <Nomina />;
         
-        case 'Inventario': return <Inventario />;
+        case 'Inventario': return <Inventario permissions={permissions} />;
         case 'Compras': return <Compras />;
         case 'Producción': return <Produccion />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
-        case 'Gestión de Usuarios': return <GestionUsuarios users={users} />;
-        case 'Configuración': return <Configuracion visibleModules={visibleModules} toggleModuleVisibility={toggleModuleVisibility} />;
-        case 'Registro de Usuario': return <RegistroUsuario onRegisterSuccess={onRegisterSuccess} onClose={onClose} />;
+        case 'Gestión de Usuarios': return <GestionUsuarios users={props.users} onDeleteSuccess={props.onDeleteSuccess} permissions={permissions} />;
+        case 'Configuración': return <Configuracion />;
+        case 'Registro de Usuario': return <RegistroUsuario onRegisterSuccess={props.onRegisterSuccess} onClose={onClose} permissions={permissions} {...props} />;
+        case 'Editar Usuario': return <RegistroUsuario onUpdateSuccess={props.onUpdateSuccess} onClose={onClose} permissions={permissions} {...props} />;
+        case 'Gestión de Permisos': return <GestionPermisos onClose={onClose} visibleModules={props.visibleModules} toggleModuleVisibility={props.toggleModuleVisibility} />;
 
         
         default: return <p>Contenido para {title} no encontrado.</p>;
@@ -121,7 +142,10 @@ const Window: React.FC<{
     toggleModuleVisibility?: (moduleName: string) => void;
     users: OrionUser[];
     onRegisterSuccess: (newUser: OrionUser) => void;
-}> = ({ win, onClose, onMinimize, onFocus, onUpdate, isFocused, onAnimationEnd, visibleModules, toggleModuleVisibility, users, onRegisterSuccess }) => {
+    onUpdateSuccess: (updatedUser: OrionUser) => void;
+    onDeleteSuccess: (userId: number) => void;
+    permissions?: Record<string, boolean>;
+}> = ({ win, onClose, onMinimize, onFocus, onUpdate, isFocused, onAnimationEnd, permissions, ...rest }) => {
     
     const headerRef = useRef<HTMLDivElement>(null);
 
@@ -198,8 +222,8 @@ const Window: React.FC<{
                     <button onClick={() => onClose(win.id)} title="Cerrar">X</button>
                 </div>
             </div>
-            <div className={`window-content ${win.title === 'Crear Pedido' || win.title === 'Registro de Usuario' ? 'no-padding' : ''}`}>
-                 <ModuleContent title={win.title} onClose={() => onClose(win.id)} visibleModules={visibleModules} toggleModuleVisibility={toggleModuleVisibility} users={users} onRegisterSuccess={onRegisterSuccess} />
+            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') ? 'no-padding' : ''}`}>
+                 <ModuleContent title={win.title} onClose={() => onClose(win.id)} permissions={permissions} {...rest} {...win.props} />
             </div>
         </div>
     );
@@ -228,6 +252,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [internalUsers, setInternalUsers] = useState<OrionUser[]>([]);
     const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
+    const [userPermissions, setUserPermissions] = useState<Record<string, Record<string, boolean>>>({});
+    const PERMISSIONS_STORAGE_KEY = 'permisosUsuarios';
+
+
+    // Effect to load permissions
+    useEffect(() => {
+        const loadPermissions = () => {
+            try {
+                const storedPermissions = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
+                setUserPermissions(storedPermissions ? JSON.parse(storedPermissions) : {});
+            } catch (error) {
+                console.error("Failed to load permissions from localStorage", error);
+                setUserPermissions({});
+            }
+        };
+
+        loadPermissions();
+        window.addEventListener('storage', loadPermissions); // Listen for changes
+        return () => window.removeEventListener('storage', loadPermissions);
+    }, []);
 
 
     // Effect to load/initialize users
@@ -250,6 +294,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         const updatedUsers = [...internalUsers, newUser];
         setInternalUsers(updatedUsers);
         localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    };
+
+    const handleUpdateUser = (updatedUser: OrionUser) => {
+        const updatedUsers = internalUsers.map(user =>
+            user.id === updatedUser.id ? updatedUser : user
+        );
+        setInternalUsers(updatedUsers);
+        localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+        // The window will be closed by the user from the success message in the form.
+    };
+
+    const handleDeleteUser = (userId: number) => {
+        if (window.confirm('¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.')) {
+            const updatedUsers = internalUsers.filter(user => user.id !== userId);
+            setInternalUsers(updatedUsers);
+            localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+        }
     };
 
 
@@ -357,12 +418,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         }
     };
 
-    const createWindow = useCallback((title: string) => {
+    const createWindow = useCallback((title: string, props: Record<string, any> = {}) => {
         if (window.innerWidth <= 768) {
             setSidebarForceOpen(false);
         }
 
-        const existingWindow = windows.find(w => w.title === title);
+        const existingWindow = windows.find(w => w.title === title && w.props?.userToEdit?.id === props.userToEdit?.id);
+
         if (existingWindow) {
             if (existingWindow.isMinimized) {
                 restoreWindow(existingWindow.id);
@@ -381,6 +443,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             isMaximized: false,
             zIndex: nextZIndex.current++,
             animationState: 'opening',
+            props,
         };
         setWindows([...windows, newWindow]);
         focusWindow(newWindow.id);
@@ -390,7 +453,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         const handleCreateWindow = (event: Event) => {
             const customEvent = event as CustomEvent;
             if (customEvent.detail && customEvent.detail.title) {
-                createWindow(customEvent.detail.title);
+                createWindow(customEvent.detail.title, customEvent.detail.props);
             }
         };
 
@@ -427,25 +490,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     
     // Window close confirmation handlers
     const requestCloseWindow = (id: string) => {
-        setWindowToCloseId(id);
-    };
-
-    const handleConfirmClose = () => {
-        if (windowToCloseId) {
-            const windowToClose = windows.find(w => w.id === windowToCloseId);
-            if (windowToClose) {
-                if (windowToClose.isMinimized) {
-                    closeWindow(windowToCloseId);
-                } else {
-                    updateWindow(windowToCloseId, { animationState: 'closing-for-close' });
-                }
+        const windowToClose = windows.find(w => w.id === id);
+        if (windowToClose) {
+            if (windowToClose.isMinimized) {
+                closeWindow(id);
+            } else {
+                updateWindow(id, { animationState: 'closing-for-close' });
             }
         }
-        setWindowToCloseId(null);
-    };
-
-    const handleCancelClose = () => {
-        setWindowToCloseId(null);
     };
     
     const handleConfirmCloseAll = () => {
@@ -712,7 +764,37 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             
             <main className="main-content">
                  <div className="relative w-full h-full overflow-hidden">
-                    {windows.filter(w => !w.isMinimized).map(win => <Window key={win.id} win={win} onClose={requestCloseWindow} onMinimize={minimizeWindow} onFocus={focusWindow} onUpdate={updateWindow} isFocused={win.zIndex === maxZIndex} onAnimationEnd={handleAnimationEnd} visibleModules={visibleModules} toggleModuleVisibility={toggleModuleVisibility} users={internalUsers} onRegisterSuccess={handleRegisterUser} />)}
+                    {windows.filter(w => !w.isMinimized).map(win => {
+                        const permissionKey = invertedModuleNameMapping[win.title];
+                        let permissions = permissionKey ? userPermissions[permissionKey] : {};
+
+                        // Handle sub-modules to inherit permissions from their parent module
+                        if (win.title === 'Crear Pedido') {
+                            permissions = userPermissions[invertedModuleNameMapping['Pedidos de Venta']] || {};
+                        } else if (win.title === 'Registro de Usuario' || win.title === 'Editar Usuario') {
+                            permissions = userPermissions[invertedModuleNameMapping['Gestión de Usuarios']] || {};
+                        }
+                        
+                        return (
+                            <Window 
+                                key={win.id} 
+                                win={win} 
+                                onClose={requestCloseWindow} 
+                                onMinimize={minimizeWindow} 
+                                onFocus={focusWindow} 
+                                onUpdate={updateWindow} 
+                                isFocused={win.zIndex === maxZIndex} 
+                                onAnimationEnd={handleAnimationEnd} 
+                                visibleModules={visibleModules} 
+                                toggleModuleVisibility={toggleModuleVisibility} 
+                                users={internalUsers} 
+                                onRegisterSuccess={handleRegisterUser} 
+                                onUpdateSuccess={handleUpdateUser} 
+                                onDeleteSuccess={handleDeleteUser}
+                                permissions={permissions} 
+                            />
+                        );
+                    })}
                  </div>
             </main>
 
@@ -724,17 +806,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     </div>
                 ))}
             </div>
-            {windowToCloseId && (
-                <div className="confirmation-modal-overlay">
-                    <div className="confirmation-modal">
-                        <h4>¿Estás seguro de que deseas cerrar esta ventana?</h4>
-                        <div className="confirmation-modal-buttons">
-                            <button onClick={handleCancelClose} className="cancel-btn">Cancelar</button>
-                            <button onClick={handleConfirmClose} className="confirm-btn">Confirmar</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            
             {showCloseAllConfirmation && (
                 <div className="confirmation-modal-overlay">
                     <div className="confirmation-modal">

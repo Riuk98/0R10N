@@ -2,18 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { OrionUser } from '../../data/internalUsers';
 
 interface RegistroUsuarioProps {
-    onRegisterSuccess: (newUser: OrionUser) => void;
+    onRegisterSuccess?: (newUser: OrionUser) => void;
+    onUpdateSuccess?: (updatedUser: OrionUser) => void;
     onClose: () => void;
+    userToEdit?: OrionUser;
+    permissions?: Record<string, boolean>;
 }
 
 // Success Icon for the confirmation message
 const SuccessIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
 
-const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, onClose }) => {
+const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, onUpdateSuccess, onClose, userToEdit, permissions }) => {
+    const isEditMode = !!userToEdit;
+    const canSubmit = isEditMode ? permissions?.actualizar : permissions?.crear;
+
     const initialFormData = {
         nombre: '',
         apellidos: '',
@@ -36,10 +42,24 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
 
     const [formData, setFormData] = useState(initialFormData);
     const [errors, setErrors] = useState<any>({});
-    const [isRegistered, setIsRegistered] = useState(false);
-    const [registeredUsername, setRegisteredUsername] = useState('');
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [submittedUsername, setSubmittedUsername] = useState('');
 
     useEffect(() => {
+        if (isEditMode && userToEdit) {
+            setFormData({
+                ...initialFormData,
+                ...userToEdit,
+                usuario: userToEdit.username,
+                confirmarPassword: userToEdit.password,
+            });
+        }
+    }, [isEditMode, userToEdit]);
+
+
+    useEffect(() => {
+        if (isEditMode) return; // Don't regenerate username in edit mode
+
         const generateUsername = () => {
             const nombre = formData.nombre.trim().toLowerCase();
             const apellidos = formData.apellidos.trim().toLowerCase();
@@ -58,7 +78,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
             }
         };
         generateUsername();
-    }, [formData.nombre, formData.apellidos, formData.cedula]);
+    }, [formData.nombre, formData.apellidos, formData.cedula, isEditMode]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -88,52 +108,71 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (validate()) {
-            const newUser: OrionUser = {
-                id: Date.now(), // Simple ID generation
-                username: formData.usuario,
-                password: formData.password,
-                role: formData.rol,
-                nombre: formData.nombre,
-                apellidos: formData.apellidos,
-                cedula: formData.cedula,
-                correoPersonal: formData.correoPersonal,
-                celular: formData.celular,
-                fechaNacimiento: formData.fechaNacimiento,
-                direccion: formData.direccion,
-                departamento: formData.departamento,
-                supervisor: formData.supervisor,
-                fechaIngreso: formData.fechaIngreso,
-                tipoContrato: formData.tipoContrato,
-                '2fa': formData['2fa'],
-                estadoCuenta: formData.estadoCuenta,
-            };
-            onRegisterSuccess(newUser);
-            setRegisteredUsername(formData.usuario);
-            setIsRegistered(true);
+            setSubmittedUsername(formData.usuario);
+            if (isEditMode && onUpdateSuccess && userToEdit) {
+                const updatedUser: OrionUser = {
+                    ...userToEdit,
+                    ...formData,
+                };
+                onUpdateSuccess(updatedUser);
+                setIsSubmitted(true); // Show success screen on update as well
+            } else if (onRegisterSuccess) {
+                 const newUser: OrionUser = {
+                    id: Date.now(),
+                    username: formData.usuario,
+                    password: formData.password,
+                    role: formData.rol,
+                    nombre: formData.nombre,
+                    apellidos: formData.apellidos,
+                    cedula: formData.cedula,
+                    correoPersonal: formData.correoPersonal,
+                    celular: formData.celular,
+                    fechaNacimiento: formData.fechaNacimiento,
+                    direccion: formData.direccion,
+                    departamento: formData.departamento,
+                    supervisor: formData.supervisor,
+                    fechaIngreso: formData.fechaIngreso,
+                    tipoContrato: formData.tipoContrato,
+                    '2fa': formData['2fa'],
+                    estadoCuenta: formData.estadoCuenta,
+                };
+                onRegisterSuccess(newUser);
+                setIsSubmitted(true);
+            }
         }
     };
     
     const handleRegisterAnother = () => {
         setFormData(initialFormData);
         setErrors({});
-        setRegisteredUsername('');
-        setIsRegistered(false);
+        setSubmittedUsername('');
+        setIsSubmitted(false);
     };
 
-    if (isRegistered) {
+    const handleOpenPermissions = () => {
+        window.dispatchEvent(new CustomEvent('createOrionWindow', {
+            detail: { title: 'Gestión de Permisos' }
+        }));
+    };
+
+    if (isSubmitted) {
         return (
             <div className="p-4 bg-[var(--bg-card)] text-[var(--text-primary)] h-full flex flex-col items-center justify-center">
                  <SuccessIcon className="w-24 h-24 text-green-500 mb-4" />
-                <h3 className="text-2xl font-bold text-[var(--secondary-green)]">¡Registro Exitoso!</h3>
+                <h3 className="text-2xl font-bold text-[var(--secondary-green)]">
+                    {isEditMode ? '¡Actualización Exitosa!' : '¡Registro Exitoso!'}
+                </h3>
                 <p className="mt-2 text-[var(--text-primary)] text-center">
-                    El usuario <strong>{registeredUsername}</strong> ha sido creado correctamente.
+                    {isEditMode ? 'Los datos del usuario' : 'El usuario'} <strong>{submittedUsername}</strong> {isEditMode ? 'han sido actualizados correctamente.' : 'ha sido creado correctamente.'}
                 </p>
                 <div className="mt-8 flex gap-4">
-                    <button 
-                        onClick={handleRegisterAnother} 
-                        className="px-6 py-2 bg-[var(--secondary-green)] text-white font-semibold rounded-lg hover:opacity-90 transition-opacity">
-                        Registrar Otro Usuario
-                    </button>
+                    {!isEditMode && (
+                        <button 
+                            onClick={handleRegisterAnother} 
+                            className="px-6 py-2 bg-[var(--secondary-green)] text-white font-semibold rounded-lg hover:opacity-90 transition-opacity">
+                            Registrar Otro Usuario
+                        </button>
+                    )}
                     <button 
                         onClick={onClose}
                         className="px-6 py-2 bg-[var(--bg-main)] text-[var(--text-primary)] font-semibold rounded-lg hover:opacity-80 transition-opacity border border-[var(--border-color)]">
@@ -157,6 +196,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                 .form-container-erp input[readOnly] { background-color: var(--border-color); cursor: not-allowed; opacity: 0.7; }
                 .form-container-erp input[type="submit"] { background-color: var(--secondary-green); color: white; font-size: 16px; border: none; cursor: pointer; transition: background 0.3s; }
                 .form-container-erp input[type="submit"]:hover { opacity: 0.9; }
+                .form-container-erp input[type="submit"]:disabled { background-color: var(--secondary-green); opacity: 0.6; cursor: not-allowed; }
                 .form-container-erp .inline-group { display: flex; gap: 20px; }
                 .form-container-erp .inline-group > div { flex: 1; }
                 .form-container-erp .checkbox-group { display: flex; gap: 15px; align-items: center; margin-bottom: 15px;}
@@ -165,6 +205,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                 .form-container-erp .error-text { color: #d9534f; font-size: 0.8em; margin-top: -10px; margin-bottom: 10px; }
             `}</style>
             <div className="form-container-erp">
+                 <h2 className="text-xl font-bold">{isEditMode ? `Editando Usuario: ${userToEdit.username}` : 'Registro de Nuevo Usuario'}</h2>
                 <form onSubmit={handleSubmit} noValidate>
                     <fieldset>
                         <legend>Datos Personales</legend>
@@ -223,7 +264,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                     <fieldset>
                         <legend>Datos de Acceso</legend>
                         <label htmlFor="usuario">Usuario (autogenerado):</label>
-                        <input type="text" id="usuario" name="usuario" value={formData.usuario} required readOnly />
+                        <input type="text" id="usuario" name="usuario" value={formData.usuario} required readOnly={isEditMode} />
                         {errors.usuario && <p className="error-text">{errors.usuario}</p>}
                         <label htmlFor="password">Contraseña:</label>
                         <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} required />
@@ -245,8 +286,23 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                             <option value="Activo">Activo</option>
                             <option value="Inactivo">Inactivo</option>
                         </select>
+                        <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
+                            <label>Permisos:</label>
+                            <p className="text-xs text-[var(--text-secondary)] mb-2">Define los permisos específicos para este rol de usuario.</p>
+                            <button 
+                                type="button"
+                                onClick={handleOpenPermissions}
+                                className="w-full py-2 px-4 border border-[var(--border-color)] rounded-md text-[var(--text-primary)] bg-[var(--bg-main)] hover:opacity-80 transition-opacity text-sm font-semibold">
+                                Verificar / Modificar Permisos
+                            </button>
+                        </div>
                     </fieldset>
-                    <input type="submit" value="Registrar Usuario" />
+                    <input 
+                        type="submit" 
+                        value={isEditMode ? 'Guardar Cambios' : 'Registrar Usuario'}
+                        disabled={!canSubmit}
+                        title={!canSubmit ? "No tiene permisos para realizar esta acción" : ""}
+                    />
                 </form>
             </div>
         </div>

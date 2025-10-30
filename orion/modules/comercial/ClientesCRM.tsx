@@ -36,7 +36,7 @@ const PrintIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const CancelIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
@@ -50,7 +50,7 @@ const ViewIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
         <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -105,6 +105,10 @@ interface FormData {
     tipoPago: string;
 }
 
+interface ClientesCRMProps {
+    permissions?: Record<string, boolean>;
+}
+
 const InputField = ({ label, name, value, onChange }: { label: string, name: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
     <div className="flex flex-col">
         <label className="text-sm font-medium text-[var(--text-secondary)] mb-1">{label}</label>
@@ -118,13 +122,17 @@ const InputField = ({ label, name, value, onChange }: { label: string, name: str
     </div>
 );
 
-const ActionButton = ({ icon, title, onClick }: { icon: React.ReactNode, title: string, onClick?: () => void }) => (
-    <button onClick={onClick} title={title} className="w-10 h-10 bg-[var(--bg-main)] text-[var(--text-primary)] rounded-full flex items-center justify-center hover:bg-[var(--border-color)] transition-colors">
+const ActionButton = ({ icon, title, onClick, disabled }: { icon: React.ReactNode, title: string, onClick?: () => void, disabled?: boolean }) => (
+    <button 
+        onClick={onClick} 
+        title={disabled ? "No tiene permisos para realizar esta acción" : title} 
+        disabled={disabled}
+        className="w-10 h-10 bg-[var(--bg-main)] text-[var(--text-primary)] rounded-full flex items-center justify-center hover:bg-[var(--border-color)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
         {icon}
     </button>
 );
 
-const ClientesCRM: React.FC = () => {
+const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions }) => {
     const USER_STORAGE_KEY = 'hatoGrandeClientes';
     const SUPPLIER_STORAGE_KEY = 'orionProveedores';
     const [activeTab, setActiveTab] = useState('movimientos');
@@ -394,8 +402,8 @@ const ClientesCRM: React.FC = () => {
                 {/* Action Buttons */}
                 <div className="flex flex-col space-y-3">
                     <ActionButton title="Buscar Cliente" onClick={handleSearch} icon={<SearchIcon className="w-5 h-5" />} />
-                    <ActionButton title="Nuevo Pedido" onClick={handleCreatePedido} icon={<CartIcon className="w-5 h-5" />} />
-                    <ActionButton title="Registrar Cliente" onClick={handleRegister} icon={<DocumentIcon className="w-5 h-5" />} />
+                    <ActionButton title="Nuevo Pedido" onClick={handleCreatePedido} icon={<CartIcon className="w-5 h-5" />} disabled={!permissions?.crear} />
+                    <ActionButton title="Registrar Cliente" onClick={handleRegister} icon={<DocumentIcon className="w-5 h-5" />} disabled={!permissions?.crear} />
                     <ActionButton title="Generar Reporte" icon={<PrintIcon className="w-5 h-5" />} />
                     <ActionButton title="Limpiar Formulario" onClick={handleReset} icon={<CancelIcon className="w-5 h-5" />} />
                 </div>

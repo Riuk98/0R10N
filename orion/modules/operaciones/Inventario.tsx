@@ -22,7 +22,7 @@ const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const EditIcon = (props: React.SVGProps<SVGSVGElement>) => (
-     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </svg>
@@ -35,8 +35,11 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+interface InventarioProps {
+    permissions?: Record<string, boolean>;
+}
 
-const Inventario: React.FC = () => {
+const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
     const [activeTab, setActiveTab] = useState<'productos' | 'insumos'>('productos');
     const [isSearching, setIsSearching] = useState(false);
 
@@ -116,12 +119,17 @@ const Inventario: React.FC = () => {
                     transition: background-color 0.2s, color 0.2s, border-color 0.2s;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 }
-                .action-btn:hover {
+                .action-btn:hover:not(:disabled) {
                     background-color: var(--border-color);
                 }
-                 .action-btn:active {
+                 .action-btn:active:not(:disabled) {
                     transform: translateY(1px);
                     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+                }
+                .action-btn:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                    background-color: var(--bg-main);
                 }
             `}</style>
 
@@ -181,13 +189,13 @@ const Inventario: React.FC = () => {
 
             {/* Bottom Actions */}
             <div className="p-2 flex items-center gap-4">
-                <button className="action-btn" title="Añadir">
+                <button className="action-btn" title={permissions?.crear ? "Añadir" : "No tiene permisos para crear"} disabled={!permissions?.crear}>
                     <PlusIcon />
                 </button>
-                <button className="action-btn" title="Editar">
+                <button className="action-btn" title={permissions?.actualizar ? "Editar" : "No tiene permisos para actualizar"} disabled={!permissions?.actualizar}>
                     <EditIcon />
                 </button>
-                 <button className="action-btn" title="Eliminar">
+                 <button className="action-btn" title={permissions?.eliminar ? "Eliminar" : "No tiene permisos para eliminar"} disabled={!permissions?.eliminar}>
                     <TrashIcon />
                 </button>
             </div>

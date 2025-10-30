@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { INTERNAL_USERS } from '../data/internalUsers';
+import React, { useState, useEffect } from 'react';
+import { INTERNAL_USERS, OrionUser } from '../data/internalUsers';
 import RippleEffect from './RippleEffect';
 
 interface LoginProps {
@@ -19,6 +19,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [registeredUsers, setRegisteredUsers] = useState<OrionUser[]>([]);
+
+    useEffect(() => {
+        const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
+        try {
+            const storedUsers = localStorage.getItem(ORION_USERS_STORAGE_KEY);
+            if (storedUsers) {
+                setRegisteredUsers(JSON.parse(storedUsers));
+            } else {
+                setRegisteredUsers(INTERNAL_USERS);
+            }
+        } catch (error) {
+            console.error("Failed to load Orion users from localStorage for login", error);
+            setRegisteredUsers(INTERNAL_USERS);
+        }
+    }, []);
+
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -27,7 +44,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         // Simulating validation with a 2-second delay for UX
         setTimeout(() => {
-            const foundUser = INTERNAL_USERS.find(
+            const foundUser = registeredUsers.find(
                 user => user.username === username && user.password === password
             );
 

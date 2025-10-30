@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { products as productList } from '../../../hatogrande/data';
 
@@ -28,6 +29,7 @@ const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 interface CrearPedidoProps {
     onClose: () => void;
+    permissions?: Record<string, boolean>;
 }
 
 interface OrderItem {
@@ -61,13 +63,18 @@ const InputField = ({ label, placeholder, className = '', value, onChange, name 
     </div>
 );
 
-const ActionButton = ({ icon, title, onClick }: { icon: React.ReactNode, title: string, onClick?: () => void }) => (
-    <button onClick={onClick} title={title} className="p-2 rounded-full hover:bg-[var(--bg-main)] transition-colors">
+const ActionButton = ({ icon, title, onClick, disabled }: { icon: React.ReactNode, title: string, onClick?: () => void, disabled?: boolean }) => (
+    <button 
+        onClick={onClick} 
+        title={disabled ? "No tiene permisos para realizar esta acción" : title} 
+        disabled={disabled}
+        className="p-2 rounded-full hover:bg-[var(--bg-main)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
         {icon}
     </button>
 );
 
-const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose }) => {
+const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
     const [orderId, setOrderId] = useState('');
     const [client, setClient] = useState({ nombre: '', nit: '', direccion: '', telefono: '', email: '' });
     const [searchError, setSearchError] = useState<string | null>(null);
@@ -335,10 +342,10 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose }) => {
 
                 <div className="pt-4 mt-4 border-t border-[var(--border-color)] flex justify-end items-center">
                     <div className="flex items-center gap-2">
-                        <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSaveOrder} />
-                        <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" />
-                        <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" />
-                        <ActionButton icon={<CheckIcon className="w-5 h-5 text-green-600"/>} title="Confirmar" onClick={handleSaveOrder} />
+                        <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSaveOrder} disabled={!permissions?.crear} />
+                        <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" disabled={!permissions?.eliminar} />
+                        <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" disabled={!permissions?.actualizar} />
+                        <ActionButton icon={<CheckIcon className="w-5 h-5 text-green-600"/>} title="Confirmar" onClick={handleSaveOrder} disabled={!permissions?.crear} />
                     </div>
                 </div>
             </div>

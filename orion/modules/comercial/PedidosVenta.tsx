@@ -23,8 +23,11 @@ const EditIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+interface PedidosVentaProps {
+    permissions?: Record<string, boolean>;
+}
 
-const PedidosVenta: React.FC = () => {
+const PedidosVenta: React.FC<PedidosVentaProps> = ({ permissions }) => {
     const [pedidos, setPedidos] = useState<any[]>([]);
 
     useEffect(() => {
@@ -155,13 +158,18 @@ const PedidosVenta: React.FC = () => {
                         <button title="Ver" className="p-2 rounded-full hover:bg-[var(--bg-main)] transition-colors">
                             <ViewIcon />
                         </button>
-                         <button title="Editar" className="p-2 rounded-full hover:bg-[var(--bg-main)] transition-colors">
+                         <button 
+                            title={permissions?.actualizar ? "Editar pedido" : "No tiene permisos para editar"} 
+                            className="p-2 rounded-full hover:bg-[var(--bg-main)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                            disabled={!permissions?.actualizar}>
                             <EditIcon />
                         </button>
                     </div>
                     <button 
                         onClick={handleCreatePedido}
-                        className="bg-[var(--bg-main)] text-[var(--text-primary)] font-semibold py-2 px-6 border border-[var(--border-color)] rounded-full shadow-[0_4px_6px_rgba(0,0,0,0.1)] hover:opacity-80 transition-colors">
+                        disabled={!permissions?.crear}
+                        title={permissions?.crear ? "Crear nuevo pedido" : "No tiene permisos para crear"}
+                        className="bg-[var(--bg-main)] text-[var(--text-primary)] font-semibold py-2 px-6 border border-[var(--border-color)] rounded-full shadow-[0_4px_6px_rgba(0,0,0,0.1)] hover:opacity-80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                         Crear Pedido
                     </button>
                 </div>
