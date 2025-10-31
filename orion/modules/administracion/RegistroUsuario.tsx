@@ -239,13 +239,11 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                         <label htmlFor="rol">Rol dentro del ERP:</label>
                         <select id="rol" name="rol" value={formData.rol} onChange={handleChange} required>
                             <option value="">Seleccione un rol</option>
+                            <option value="Vendedor/Administrativo">Vendedor/Administrativo</option>
+                            <option value="Coordinador/Jefe">Coordinador/Jefe</option>
+                            <option value="Contabilidad/Tesoreria">Contabilidad/Tesoreria</option>
+                            <option value="Logistica/Almacen">Logistica/Almacen</option>
                             <option value="Administrador">Administrador</option>
-                            <option value="Contador">Contador</option>
-                            <option value="Compras">Compras</option>
-                            <option value="Ventas">Ventas</option>
-                            <option value="Producción">Producción</option>
-                            <option value="Recursos Humanos">Recursos Humanos</option>
-                            <option value="User">Usuario Básico</option>
                         </select>
                         {errors.rol && <p className="error-text">{errors.rol}</p>}
                         <label htmlFor="departamento">Departamento / Área:</label>

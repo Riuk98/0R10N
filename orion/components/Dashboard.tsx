@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Switch from './Switch'; // Import the new Switch component
 
@@ -36,6 +38,7 @@ import Configuracion from '../modules/administracion/Configuracion';
 import RegistroUsuario from '../modules/administracion/RegistroUsuario';
 import GestionPermisos from '../modules/administracion/GestionPermisos';
 import { OrionUser, INTERNAL_USERS } from '../data/internalUsers';
+import { defaultPermissionsByRole } from '../data/permissions';
 
 
 // --- SVG ICONS (as React components for easier use) ---
@@ -69,7 +72,7 @@ const navData = [
     { title: "Comercial", icon: Icons.Commercial, items: ["Terceros (CRM)", "Pedidos de Venta", "Soporte (PQR)"] },
     { title: "Financiero", icon: Icons.Financial, items: ["Cuentas por Cobrar", "Cuentas por Pagar", "Contabilidad", "Nómina"] },
     { title: "Operaciones", icon: Icons.Operations, items: ["Inventario", "Compras", "Producción"] },
-    { title: "Administración", icon: Icons.Admin, items: ["Reportes y Analíticas", "Gestión de Usuarios", "Configuración"] },
+    { title: "Administración", icon: Icons.Admin, items: ["Reportes y Analíticas", "Gestión de Usuarios", "Configuración", "Gestión de Permisos"] },
 ];
 
 const moduleNameMapping: { [key: string]: string } = {
@@ -85,7 +88,8 @@ const moduleNameMapping: { [key: string]: string } = {
     "Produccion": "Producción",
     "Reportes y analiticas": "Reportes y Analíticas",
     "Gestion de usuarios": "Gestión de Usuarios",
-    "Configuracion": "Configuración"
+    "Configuracion": "Configuración",
+    "Gestion de permisos": "Gestión de Permisos"
 };
 
 const invertedModuleNameMapping: { [key: string]: string } = {};
@@ -121,7 +125,7 @@ const ModuleContent: React.FC<{
         case 'Configuración': return <Configuracion />;
         case 'Registro de Usuario': return <RegistroUsuario onRegisterSuccess={props.onRegisterSuccess} onClose={onClose} permissions={permissions} {...props} />;
         case 'Editar Usuario': return <RegistroUsuario onUpdateSuccess={props.onUpdateSuccess} onClose={onClose} permissions={permissions} {...props} />;
-        case 'Gestión de Permisos': return <GestionPermisos onClose={onClose} visibleModules={props.visibleModules} toggleModuleVisibility={props.toggleModuleVisibility} />;
+        case 'Gestión de Permisos': return <GestionPermisos onClose={onClose} />;
 
         
         default: return <p>Contenido para {title} no encontrado.</p>;
@@ -138,8 +142,6 @@ const Window: React.FC<{
     onUpdate: (id: string, updates: Partial<WindowState>) => void,
     isFocused: boolean;
     onAnimationEnd: (id: string) => void;
-    visibleModules?: Record<string, boolean>;
-    toggleModuleVisibility?: (moduleName: string) => void;
     users: OrionUser[];
     onRegisterSuccess: (newUser: OrionUser) => void;
     onUpdateSuccess: (updatedUser: OrionUser) => void;
@@ -252,16 +254,36 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [internalUsers, setInternalUsers] = useState<OrionUser[]>([]);
     const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
+
+    // Unified, role-based permission state
     const [userPermissions, setUserPermissions] = useState<Record<string, Record<string, boolean>>>({});
-    const PERMISSIONS_STORAGE_KEY = 'permisosUsuarios';
-
-
-    // Effect to load permissions
+    const PERMISSIONS_BY_ROLE_STORAGE_KEY = 'permisosPorRol';
+    
+    // Effect to load permissions based on the logged-in user's role
     useEffect(() => {
         const loadPermissions = () => {
             try {
-                const storedPermissions = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
-                setUserPermissions(storedPermissions ? JSON.parse(storedPermissions) : {});
+                const currentUserRaw = sessionStorage.getItem('orionCurrentUser');
+                const currentUser: OrionUser | null = currentUserRaw ? JSON.parse(currentUserRaw) : null;
+                
+                if (!currentUser || !currentUser.role) {
+                    setUserPermissions({}); // No user or role, no permissions
+                    return;
+                }
+
+                const storedPermissionsRaw = localStorage.getItem(PERMISSIONS_BY_ROLE_STORAGE_KEY);
+                let allPermissions = storedPermissionsRaw ? JSON.parse(storedPermissionsRaw) : defaultPermissionsByRole;
+                
+                // If storage is empty, initialize it with defaults for all roles
+                if (!storedPermissionsRaw) {
+                    localStorage.setItem(PERMISSIONS_BY_ROLE_STORAGE_KEY, JSON.stringify(defaultPermissionsByRole));
+                }
+                
+                const rolePermissions = allPermissions[currentUser.role];
+                
+                // Set permissions for the current user's role. Fallback to Admin defaults if something is wrong.
+                setUserPermissions(rolePermissions || (currentUser.role === 'Administrador' ? defaultPermissionsByRole['Administrador'] : {}));
+
             } catch (error) {
                 console.error("Failed to load permissions from localStorage", error);
                 setUserPermissions({});
@@ -269,7 +291,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         };
 
         loadPermissions();
-        window.addEventListener('storage', loadPermissions); // Listen for changes
+        // Listen for changes in storage (e.g., from the permissions module)
+        window.addEventListener('storage', loadPermissions); 
         return () => window.removeEventListener('storage', loadPermissions);
     }, []);
 
@@ -311,42 +334,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             setInternalUsers(updatedUsers);
             localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
         }
-    };
-
-
-    const allModules = navData.flatMap(pillar => pillar.items);
-    const [visibleModules, setVisibleModules] = useState<Record<string, boolean>>(() => {
-        try {
-            const savedVisibility = localStorage.getItem('orion_module_visibility');
-            if (savedVisibility) {
-                const parsed = JSON.parse(savedVisibility);
-                // Ensure all modules from navData are present in the state, default to true if new
-                allModules.forEach(moduleName => {
-                    if (parsed[moduleName] === undefined) {
-                        parsed[moduleName] = true;
-                    }
-                });
-                return parsed;
-            }
-        } catch (e) {
-            console.error("Failed to parse module visibility from localStorage", e);
-        }
-        // Default to all visible
-        return allModules.reduce((acc, moduleName) => {
-            acc[moduleName] = true;
-            return acc;
-        }, {} as Record<string, boolean>);
-    });
-
-    useEffect(() => {
-        localStorage.setItem('orion_module_visibility', JSON.stringify(visibleModules));
-    }, [visibleModules]);
-    
-    const toggleModuleVisibility = (moduleName: string) => {
-        setVisibleModules(prev => ({
-            ...prev,
-            [moduleName]: !prev[moduleName],
-        }));
     };
 
     // Theme effect
@@ -530,7 +517,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
     const filteredNavData = navData.map(pillar => ({
         ...pillar,
-        items: pillar.items.filter(item => visibleModules[item] ?? true)
+        items: pillar.items.filter(item => {
+            const permissionKey = invertedModuleNameMapping[item];
+            // If a permission key exists, check the 'ver' property. If not, don't show.
+            return permissionKey ? userPermissions[permissionKey]?.ver : false;
+        })
     })).filter(pillar => pillar.items.length > 0);
     
     return (
@@ -773,6 +764,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                             permissions = userPermissions[invertedModuleNameMapping['Pedidos de Venta']] || {};
                         } else if (win.title === 'Registro de Usuario' || win.title === 'Editar Usuario') {
                             permissions = userPermissions[invertedModuleNameMapping['Gestión de Usuarios']] || {};
+                        } else if (win.title === 'Gestión de Permisos') {
+                            permissions = userPermissions[invertedModuleNameMapping['Gestión de Permisos']] || {};
                         }
                         
                         return (
@@ -785,8 +778,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                                 onUpdate={updateWindow} 
                                 isFocused={win.zIndex === maxZIndex} 
                                 onAnimationEnd={handleAnimationEnd} 
-                                visibleModules={visibleModules} 
-                                toggleModuleVisibility={toggleModuleVisibility} 
                                 users={internalUsers} 
                                 onRegisterSuccess={handleRegisterUser} 
                                 onUpdateSuccess={handleUpdateUser} 

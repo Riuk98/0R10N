@@ -1,16 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { modulos, defaultPermissionsByRole, roles } from '../../data/permissions';
 
 interface GestionPermisosProps {
     onClose?: () => void;
-    visibleModules?: Record<string, boolean>;
-    toggleModuleVisibility?: (moduleName: string) => void;
 }
-
-const modulos = [
-    "Terceros", "Pedidos de venta", "Soporte", "Cuentas por cobrar", "Cuentas por pagar",
-    "Contabilidad", "Nomina", "Inventario", "Compras", "Produccion",
-    "Reportes y analiticas", "Gestion de usuarios", "Configuracion"
-];
 
 const moduleNameMapping: { [key: string]: string } = {
     "Terceros": "Terceros (CRM)",
@@ -25,45 +18,55 @@ const moduleNameMapping: { [key: string]: string } = {
     "Produccion": "Producción",
     "Reportes y analiticas": "Reportes y Analíticas",
     "Gestion de usuarios": "Gestión de Usuarios",
-    "Configuracion": "Configuración"
+    "Configuracion": "Configuración",
+    "Gestion de permisos": "Gestión de Permisos"
 };
 
+const PERMISSIONS_STORAGE_KEY = 'permisosPorRol';
 
-const GestionPermisos: React.FC<GestionPermisosProps> = ({ onClose = () => {}, visibleModules = {}, toggleModuleVisibility = (_moduleName) => {} }) => {
-    const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>({});
+const GestionPermisos: React.FC<GestionPermisosProps> = ({ onClose = () => {} }) => {
+    const [permissionsByRole, setPermissionsByRole] = useState<Record<string, Record<string, Record<string, boolean>>>>({});
+    const [selectedRole, setSelectedRole] = useState(roles[0]);
     const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
-    const loadPermissions = () => {
-        try {
-            const savedPermissions = JSON.parse(localStorage.getItem("permisosUsuarios") || '{}');
-            setPermissions(savedPermissions);
-        } catch (e) {
-            console.error("Failed to load permissions from localStorage", e);
-            setPermissions({});
-        }
-    };
-
     useEffect(() => {
+        const loadPermissions = () => {
+            try {
+                const savedPermissions = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
+                if (savedPermissions) {
+                    setPermissionsByRole(JSON.parse(savedPermissions));
+                } else {
+                    setPermissionsByRole(defaultPermissionsByRole);
+                }
+            } catch (e) {
+                console.error("Failed to load permissions from localStorage", e);
+                setPermissionsByRole(defaultPermissionsByRole);
+            }
+        };
         loadPermissions();
     }, []);
 
     const handleToggle = (modulo: string, permiso: string) => {
-        setPermissions(prev => {
-            const newPermissions = JSON.parse(JSON.stringify(prev)); // Deep copy to avoid state mutation issues
-            if (!newPermissions[modulo]) {
-                newPermissions[modulo] = {};
+        setPermissionsByRole(prev => {
+            const newPermissions = JSON.parse(JSON.stringify(prev));
+            if (!newPermissions[selectedRole]) {
+                newPermissions[selectedRole] = {};
             }
-            newPermissions[modulo][permiso] = !newPermissions[modulo][permiso];
+            if (!newPermissions[selectedRole][modulo]) {
+                newPermissions[selectedRole][modulo] = {};
+            }
+            newPermissions[selectedRole][modulo][permiso] = !newPermissions[selectedRole][modulo][permiso];
             return newPermissions;
         });
     };
 
     const isChecked = (modulo: string, permiso: string) => {
-        return permissions[modulo]?.[permiso] || false;
+        return permissionsByRole[selectedRole]?.[modulo]?.[permiso] || false;
     };
 
     const handleSave = () => {
-        localStorage.setItem("permisosUsuarios", JSON.stringify(permissions));
+        localStorage.setItem(PERMISSIONS_STORAGE_KEY, JSON.stringify(permissionsByRole));
+        window.dispatchEvent(new Event("storage")); // Notify other tabs/windows of the change
         setShowSuccessAlert(true);
         setTimeout(() => setShowSuccessAlert(false), 2000);
     };
@@ -80,11 +83,15 @@ const GestionPermisos: React.FC<GestionPermisosProps> = ({ onClose = () => {}, v
                   display: flex;
                   flex-direction: column;
                 }
-                .permissions-container h2 {
-                  text-align: left;
-                  color: var(--text-primary);
+                .permissions-header {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
                   margin-bottom: 20px;
                   flex-shrink: 0;
+                }
+                .permissions-container h2 {
+                  color: var(--text-primary);
                 }
                 .permissions-table-wrapper {
                     flex-grow: 1;
@@ -181,7 +188,22 @@ const GestionPermisos: React.FC<GestionPermisosProps> = ({ onClose = () => {}, v
                 }
             `}</style>
             <div className="permissions-container">
-                <h2>Permisos Roles de Usuario</h2>
+                <div className="permissions-header">
+                    <h2>Permisos Roles de Usuario</h2>
+                    <div>
+                        <label htmlFor="role-select" className="mr-2 font-semibold">Seleccionar Rol:</label>
+                        <select
+                            id="role-select"
+                            value={selectedRole}
+                            onChange={(e) => setSelectedRole(e.target.value)}
+                            className="p-2 border border-[var(--border-color)] rounded-md bg-[var(--bg-main)] text-[var(--text-primary)]"
+                        >
+                            {roles.map(role => (
+                                <option key={role} value={role}>{role}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
                 <div className="permissions-table-wrapper">
                     <table>
                         <thead>
@@ -195,36 +217,25 @@ const GestionPermisos: React.FC<GestionPermisosProps> = ({ onClose = () => {}, v
                             </tr>
                         </thead>
                         <tbody>
-                            {modulos.map((modulo, i) => {
-                                const mappedModuleName = moduleNameMapping[modulo];
-                                return (
+                            {modulos.map((modulo, i) => (
                                 <tr key={modulo}>
                                     <td>{i + 1}</td>
-                                    <td>{modulo}</td>
-                                    <td>
-                                        <label className="switch">
-                                            <input
-                                                type="checkbox"
-                                                checked={visibleModules[mappedModuleName] ?? true}
-                                                onChange={() => toggleModuleVisibility(mappedModuleName)}
-                                            />
-                                            <span className="slider"></span>
-                                        </label>
-                                    </td>
-                                    {["crear", "actualizar", "eliminar"].map(permiso => (
+                                    <td>{moduleNameMapping[modulo] || modulo}</td>
+                                    {["ver", "crear", "actualizar", "eliminar"].map(permiso => (
                                         <td key={permiso}>
                                             <label className="switch">
                                                 <input
                                                     type="checkbox"
                                                     checked={isChecked(modulo, permiso)}
                                                     onChange={() => handleToggle(modulo, permiso)}
+                                                    disabled={selectedRole === 'Administrador'}
                                                 />
                                                 <span className="slider"></span>
                                             </label>
                                         </td>
                                     ))}
                                 </tr>
-                            )})}
+                            ))}
                         </tbody>
                     </table>
                 </div>

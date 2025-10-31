@@ -49,6 +49,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             );
 
             if (foundUser) {
+                sessionStorage.setItem('orionCurrentUser', JSON.stringify(foundUser));
                 onLoginSuccess();
             } else {
                 setError('Usuario o contraseña incorrectos.');

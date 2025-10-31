@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useCallback, useEffect } from 'react';
 
 // Orion components
@@ -240,6 +241,7 @@ function App() {
     };
 
     const handleOrionLogout = () => {
+        sessionStorage.removeItem('orionCurrentUser');
         setIsOrionLoggedIn(false);
         navigateTo('home'); 
     };

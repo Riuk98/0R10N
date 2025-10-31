@@ -26,6 +26,6 @@ export const INTERNAL_USERS: OrionUser[] = [
         id: 1,
         username: 'admin',
         password: 'admin',
-        role: 'Administrator',
+        role: 'Administrador',
     }
 ];
