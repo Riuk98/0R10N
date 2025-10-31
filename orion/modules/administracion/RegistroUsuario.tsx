@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { OrionUser } from '../../data/internalUsers';
+import { roles } from '../../data/permissions';
 
 interface RegistroUsuarioProps {
     onRegisterSuccess?: (newUser: OrionUser) => void;
@@ -9,12 +10,19 @@ interface RegistroUsuarioProps {
     permissions?: Record<string, boolean>;
 }
 
-// Success Icon for the confirmation message
+// --- ICONS ---
 const SuccessIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
+
+const PadlockIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+    </svg>
+);
+
 
 const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, onUpdateSuccess, onClose, userToEdit, permissions }) => {
     const isEditMode = !!userToEdit;
@@ -236,16 +244,34 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                     </fieldset>
                     <fieldset>
                         <legend>Datos Laborales</legend>
-                        <label htmlFor="rol">Rol dentro del ERP:</label>
-                        <select id="rol" name="rol" value={formData.rol} onChange={handleChange} required>
-                            <option value="">Seleccione un rol</option>
-                            <option value="Vendedor/Administrativo">Vendedor/Administrativo</option>
-                            <option value="Coordinador/Jefe">Coordinador/Jefe</option>
-                            <option value="Contabilidad/Tesoreria">Contabilidad/Tesoreria</option>
-                            <option value="Logistica/Almacen">Logistica/Almacen</option>
-                            <option value="Administrador">Administrador</option>
-                        </select>
-                        {errors.rol && <p className="error-text">{errors.rol}</p>}
+                        <div>
+                            <label htmlFor="rol">Rol de Usuario:</label>
+                            <div className="flex items-center gap-2 mb-[15px]">
+                                <select 
+                                    id="rol" 
+                                    name="rol" 
+                                    value={formData.rol} 
+                                    onChange={handleChange} 
+                                    required 
+                                    style={{ flexGrow: 1, marginBottom: 0 }}
+                                >
+                                    <option value="">Seleccione un rol</option>
+                                    {roles.map(role => (
+                                        <option key={role} value={role}>{role}</option>
+                                    ))}
+                                </select>
+                                <button 
+                                    type="button" 
+                                    onClick={handleOpenPermissions} 
+                                    className="flex-shrink-0 p-2 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-md hover:opacity-80 transition-opacity"
+                                    style={{ height: '37px', width: '37px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    title="Gestionar permisos granulares"
+                                >
+                                    <PadlockIcon className="w-5 h-5 text-[var(--text-primary)]"/>
+                                </button>
+                            </div>
+                            {errors.rol && <p className="error-text" style={{ marginTop: '-10px' }}>{errors.rol}</p>}
+                        </div>
                         <label htmlFor="departamento">Departamento / Área:</label>
                         <input type="text" id="departamento" name="departamento" value={formData.departamento} onChange={handleChange} />
                         <label htmlFor="supervisor">Supervisor Directo:</label>
@@ -284,16 +310,6 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                             <option value="Activo">Activo</option>
                             <option value="Inactivo">Inactivo</option>
                         </select>
-                        <div className="mt-4 pt-4 border-t border-[var(--border-color)]">
-                            <label>Permisos:</label>
-                            <p className="text-xs text-[var(--text-secondary)] mb-2">Define los permisos específicos para este rol de usuario.</p>
-                            <button 
-                                type="button"
-                                onClick={handleOpenPermissions}
-                                className="w-full py-2 px-4 border border-[var(--border-color)] rounded-md text-[var(--text-primary)] bg-[var(--bg-main)] hover:opacity-80 transition-opacity text-sm font-semibold">
-                                Verificar / Modificar Permisos
-                            </button>
-                        </div>
                     </fieldset>
                     <input 
                         type="submit" 
