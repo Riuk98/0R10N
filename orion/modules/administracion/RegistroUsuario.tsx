@@ -40,6 +40,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
         departamento: '',
         supervisor: '',
         fechaIngreso: '',
+        fechaTerminacion: '',
         tipoContrato: '',
         usuario: '',
         password: '',
@@ -76,7 +77,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
             if (nombre && apellidos && cedula.length >= 4) {
                 const firstInitial = nombre.charAt(0);
                 const firstLastName = apellidos.split(' ')[0];
-                const lastCedulaDigits = cedula.slice(-4);
+                const lastCedulaDigits = cedula.slice(-3);
                 
                 const newUsername = `${firstInitial}${firstLastName}${lastCedulaDigits}`.replace(/\s/g, '');
                 
@@ -140,6 +141,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                     departamento: formData.departamento,
                     supervisor: formData.supervisor,
                     fechaIngreso: formData.fechaIngreso,
+                    fechaTerminacion: formData.fechaTerminacion,
                     tipoContrato: formData.tipoContrato,
                     '2fa': formData['2fa'],
                     estadoCuenta: formData.estadoCuenta,
@@ -259,6 +261,21 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                                 <label htmlFor="direccion">Dirección de Residencia:</label>
                                 <input type="text" id="direccion" name="direccion" value={formData.direccion} onChange={handleChange} />
                             </fieldset>
+                            <fieldset>
+                                <legend>Seguridad y Estado</legend>
+                                <label>Autenticación de Dos Factores (2FA):</label>
+                                <div className="checkbox-group">
+                                    <label><input type="radio" name="2fa" value="correo" checked={formData['2fa'] === 'correo'} onChange={handleCheckboxChange} /> Correo</label>
+                                    <label><input type="radio" name="2fa" value="celular" checked={formData['2fa'] === 'celular'} onChange={handleCheckboxChange} /> Celular</label>
+                                    <label><input type="radio" name="2fa" value="no" checked={formData['2fa'] === 'no'} onChange={handleCheckboxChange} /> No activar</label>
+                                </div>
+                                <label htmlFor="estadoCuenta">Estado de usuario:</label>
+                                <select id="estadoCuenta" name="estadoCuenta" value={formData.estadoCuenta} onChange={handleChange}>
+                                    <option value="Activo">Activo</option>
+                                    <option value="Inactivo">Inactivo</option>
+                                </select>
+                            </fieldset>
+
                         </div>
 
                          {/* --- COLUMNA DERECHA --- */}
@@ -293,8 +310,6 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                                     </div>
                                     {errors.rol && <p className="error-text" style={{ marginTop: '-10px' }}>{errors.rol}</p>}
                                 </div>
-                                <label htmlFor="departamento">Departamento / Área:</label>
-                                <input type="text" id="departamento" name="departamento" value={formData.departamento} onChange={handleChange} />
                                 <label htmlFor="supervisor">Supervisor Directo:</label>
                                 <input type="text" id="supervisor" name="supervisor" value={formData.supervisor} onChange={handleChange} />
                                 <label htmlFor="fechaIngreso">Fecha de Ingreso:</label>
@@ -305,6 +320,8 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                                     <option value="Fijo">Fijo</option>
                                     <option value="Temporal">Temporal</option>
                                 </select>
+                                <label htmlFor="fechaTerminacion">Fecha de Terminacion:</label>
+                                <input type="date" id="fechaTerminacion" name="fechaTermiacion" value={formData.fechaIngreso} onChange={handleChange} />
                             </fieldset>
                             <fieldset>
                                 <legend>Datos de Acceso</legend>
@@ -318,20 +335,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                                 <input type="password" id="confirmarPassword" name="confirmarPassword" value={formData.confirmarPassword} onChange={handleChange} required />
                                 {errors.confirmarPassword && <p className="error-text">{errors.confirmarPassword}</p>}
                             </fieldset>
-                             <fieldset>
-                                <legend>Seguridad y Estado</legend>
-                                <label>Autenticación de Dos Factores (2FA):</label>
-                                <div className="checkbox-group">
-                                    <label><input type="radio" name="2fa" value="correo" checked={formData['2fa'] === 'correo'} onChange={handleCheckboxChange} /> Correo</label>
-                                    <label><input type="radio" name="2fa" value="celular" checked={formData['2fa'] === 'celular'} onChange={handleCheckboxChange} /> Celular</label>
-                                    <label><input type="radio" name="2fa" value="no" checked={formData['2fa'] === 'no'} onChange={handleCheckboxChange} /> No activar</label>
-                                </div>
-                                <label htmlFor="estadoCuenta">Estado de usuario:</label>
-                                <select id="estadoCuenta" name="estadoCuenta" value={formData.estadoCuenta} onChange={handleChange}>
-                                    <option value="Activo">Activo</option>
-                                    <option value="Inactivo">Inactivo</option>
-                                </select>
-                            </fieldset>
+                            
                         </div>
                     </div>
                      <div className="mt-auto pt-4 flex-shrink-0">
