@@ -16,6 +16,8 @@ export interface OrionUser {
     departamento?: string;
     supervisor?: string;
     fechaIngreso?: string;
+    // FIX: Add missing optional property to the interface.
+    fechaTerminacion?: string;
     tipoContrato?: string;
     '2fa'?: string;
     estadoCuenta?: string;

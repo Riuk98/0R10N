@@ -321,7 +321,8 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                                     <option value="Temporal">Temporal</option>
                                 </select>
                                 <label htmlFor="fechaTerminacion">Fecha de Terminacion:</label>
-                                <input type="date" id="fechaTerminacion" name="fechaTermiacion" value={formData.fechaIngreso} onChange={handleChange} />
+                                {/* FIX: Corrected typo in 'name' attribute and bound the value to the correct state property. */}
+                                <input type="date" id="fechaTerminacion" name="fechaTerminacion" value={formData.fechaTerminacion} onChange={handleChange} />
                             </fieldset>
                             <fieldset>
                                 <legend>Datos de Acceso</legend>

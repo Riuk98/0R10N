@@ -89,6 +89,9 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
     
     const [seller, setSeller] = useState({ id: '001', name: 'Martha Milena' });
     const [observations, setObservations] = useState('');
+    
+    const [isConfirmed, setIsConfirmed] = useState(false);
+
 
     const resetForm = useCallback(() => {
         setClient({ nombre: '', nit: '', direccion: '', telefono: '', email: '' });
@@ -202,10 +205,10 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
         setItems(prev => prev.filter(item => item.id !== id));
     };
 
-    const handleSaveOrder = () => {
+    const saveOrderLogic = (isConfirmed: boolean = false) => {
         if (!client.nombre || items.length === 0) {
             alert("Debe seleccionar un cliente y agregar al menos un producto.");
-            return;
+            return null;
         }
 
         const newOrder = {
@@ -233,7 +236,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
             sellerName: seller.name,
             observations: observations,
             source: 'CRM',
-            status: 'Abierto',
+            status: isConfirmed ? 'En proceso' : 'Abierto',
         };
 
         const storedPedidos = JSON.parse(localStorage.getItem('hatoGrandePedidos') || '[]');
@@ -241,9 +244,46 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
         localStorage.setItem('hatoGrandePedidos', JSON.stringify(storedPedidos));
         window.dispatchEvent(new Event("storage"));
         
-        alert(`Pedido ${orderId} guardado exitosamente.`);
-        resetForm();
+        return newOrder;
     };
+
+    const handleSimpleSave = () => {
+        if (isConfirmed) return;
+        const savedOrder = saveOrderLogic(false);
+        if(savedOrder) {
+            alert(`Pedido ${orderId} guardado exitosamente.`);
+            resetForm();
+        }
+    };
+    
+    const handleConfirmAndInvoice = () => {
+        if (isConfirmed) return;
+        const savedOrder = saveOrderLogic(true);
+        if (savedOrder) {
+            setIsConfirmed(true);
+            window.dispatchEvent(new CustomEvent('createOrionWindow', {
+                detail: { 
+                    title: 'Facturación',
+                    props: { order: savedOrder } 
+                }
+            }));
+        }
+    };
+    
+    if (isConfirmed) {
+        return (
+            <div className="flex flex-col h-full bg-[var(--bg-card)] text-[var(--text-primary)] items-center justify-center text-center p-8">
+                <CheckIcon className="w-20 h-20 text-green-500 mb-4" />
+                <h3 className="text-2xl font-bold">Pedido Confirmado</h3>
+                <p className="text-lg mt-2">El pedido <strong>{orderId}</strong> ha sido guardado y se ha generado la factura.</p>
+                <button
+                    onClick={onClose}
+                    className="mt-8 px-6 py-2 bg-[var(--bg-main)] text-[var(--text-primary)] font-semibold rounded-lg hover:opacity-80 transition-opacity border border-[var(--border-color)]">
+                    Atras
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-[var(--bg-card)] text-[var(--text-primary)]">
@@ -342,10 +382,10 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
 
                 <div className="pt-4 mt-4 border-t border-[var(--border-color)] flex justify-end items-center">
                     <div className="flex items-center gap-2">
-                        <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSaveOrder} disabled={!permissions?.crear} />
-                        <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" disabled={!permissions?.eliminar} />
-                        <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" disabled={!permissions?.actualizar} />
-                        <ActionButton icon={<CheckIcon className="w-5 h-5 text-green-600"/>} title="Confirmar" onClick={handleSaveOrder} disabled={!permissions?.crear} />
+                        <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSimpleSave} disabled={!permissions?.crear || isConfirmed} />
+                        <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" disabled={!permissions?.eliminar || isConfirmed} />
+                        <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" disabled={!permissions?.actualizar || isConfirmed} />
+                        <ActionButton icon={<CheckIcon className="w-5 h-5 text-green-600"/>} title="Confirmar" onClick={handleConfirmAndInvoice} disabled={!permissions?.crear || isConfirmed} />
                     </div>
                 </div>
             </div>

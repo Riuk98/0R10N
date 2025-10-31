@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 
 // --- TYPE DEFINITIONS ---
@@ -162,6 +161,12 @@ const SoportePQR: React.FC = () => {
     
     const tableHeaders = ['No. Ticket', 'F. Creacion', 'Cliente', 'Tipo', 'Area', 'Prioridad', 'Estado', 'F. Respuesta'];
 
+    const handleGenerateTicket = () => {
+        window.dispatchEvent(new CustomEvent('createOrionWindow', {
+            detail: { title: 'Generar Ticket' }
+        }));
+    };
+
     return (
         <>
             <style>{`
@@ -257,7 +262,9 @@ const SoportePQR: React.FC = () => {
 
                 {/* Bottom Button */}
                 <div className="flex justify-end mt-2">
-                    <button className="bg-[var(--bg-main)] text-[var(--text-primary)] font-semibold py-2 px-6 border border-[var(--border-color)] rounded-full shadow-[0_4px_6px_rgba(0,0,0,0.1)] hover:opacity-80 transition-colors">
+                    <button 
+                        onClick={handleGenerateTicket}
+                        className="bg-[var(--bg-main)] text-[var(--text-primary)] font-semibold py-2 px-6 border border-[var(--border-color)] rounded-full shadow-[0_4px_6px_rgba(0,0,0,0.1)] hover:opacity-80 transition-colors">
                         Genera Ticket
                     </button>
                 </div>

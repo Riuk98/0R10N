@@ -21,6 +21,8 @@ import ClientesCRM from '../modules/comercial/ClientesCRM';
 import PedidosVenta from '../modules/comercial/PedidosVenta';
 import SoportePQR from '../modules/comercial/SoportePQR';
 import CrearPedido from '../modules/comercial/CrearPedido';
+import CrearTicket from '../modules/comercial/CrearTicket';
+import Facturacion from '../modules/comercial/Facturacion';
 
 
 import CuentasCobrar from '../modules/financiero/CuentasCobrar';
@@ -110,6 +112,8 @@ const ModuleContent: React.FC<{
         case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
         case 'Soporte (PQR)': return <SoportePQR />;
         case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} />;
+        case 'Generar Ticket': return <CrearTicket onClose={onClose} />;
+        case 'Facturación': return <Facturacion onClose={onClose} {...props} />;
 
         case 'Cuentas por Cobrar': return <CuentasCobrar />;
         case 'Cuentas por Pagar': return <CuentasPagar />;
@@ -224,7 +228,7 @@ const Window: React.FC<{
                     <button onClick={() => onClose(win.id)} title="Cerrar">X</button>
                 </div>
             </div>
-            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') ? 'no-padding' : ''}`}>
+            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') || win.title.includes('Ticket') || win.title.includes('Facturación') ? 'no-padding' : ''}`}>
                  <ModuleContent title={win.title} onClose={() => onClose(win.id)} permissions={permissions} {...rest} {...win.props} />
             </div>
         </div>
@@ -410,7 +414,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             setSidebarForceOpen(false);
         }
 
-        const existingWindow = windows.find(w => w.title === title && w.props?.userToEdit?.id === props.userToEdit?.id);
+        const existingWindow = windows.find(w => 
+            w.title === title && 
+            (w.props?.userToEdit?.id === props.userToEdit?.id || w.props?.order?.id === props.order?.id)
+        );
+
 
         if (existingWindow) {
             if (existingWindow.isMinimized) {
