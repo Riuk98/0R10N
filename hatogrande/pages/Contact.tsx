@@ -93,84 +93,115 @@ const Contact: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen py-12 sm:py-20 px-4">
-            <div className="container mx-auto max-w-6xl">
-                <div className="bg-white rounded-2xl shadow-2xl flex flex-col lg:flex-row overflow-hidden">
-                    {/* Left Side: Info & Map */}
-                    <div className="w-full lg:w-2/5 p-8 md:p-12 text-[var(--color-dark)] bg-[#D9B814]">
-                        <div className="flex flex-col h-full">
-                           <div className="bg-gray-100 backdrop-blur-sm p-6 rounded-xl shadow-lg mb-8">
-                                <h2 className="text-3xl font-bold mb-4 text-[var(--color-dark)]">Estamos para ayudarte</h2>
-                                <p className="mb-8 opacity-90 text-black">¿Tienes alguna pregunta, sugerencia o necesitas ayuda con un pedido? No dudes en contactarnos. Nuestro equipo está listo para atenderte.</p>
-                                
-                                <div className="space-y-4 text-lg">
-                                    <p className="flex items-center gap-3 text-black"><Icons.Location className="w-6 h-6 text-[var(--color-secondary)]" /> Finca Hato Grande, Suesca</p>
-                                    <p className="flex items-center gap-3 text-black"><Icons.Email className="w-6 h-6 text-[var(--color-secondary)]" /> ventas@hatogrande.com</p>
-                                    <p className="flex items-center gap-3 text-black"><Icons.Phone className="w-6 h-6 text-[var(--color-secondary)]" /> +57 310 123 4567</p>
-                                </div>
-                            </div>
-
-                            <div className="mt-auto h-48 bg-[var(--color-accent)]/50 rounded-lg flex items-center justify-center text-center p-4 border border-[var(--color-secondary)]">
-                                <p className="text-sm opacity-80 text-black">Aquí iría un mapa interactivo de nuestra ubicación.</p>
+        <div className="hg-auth">
+            <div className="hg-backdrop" aria-hidden="true">
+                <div className="hg-backdrop__sun" />
+                <div className="hg-backdrop__hill hg-backdrop__hill--near" />
+                <div className="hg-backdrop__hill hg-backdrop__hill--far" />
+                <div className="hg-backdrop__grain" />
+            </div>
+            <div className="hg-stage">
+                <div className="hg-card hg-card--glass">
+                    <div className="hg-card__panel hg-card__panel--brand">
+                        <div className="hg-brand">
+                            <div className="hg-badge">Atención cercana</div>
+                            <h2 className="hg-brand__title">Contáctanos</h2>
+                            <p className="hg-brand__copy">Estamos aquí para ayudarte con tus pedidos, sugerencias o soporte. Nuestro equipo te responderá con gusto.</p>
+                            <div className="hg-contact-info">
+                                <p><Icons.Location className="w-5 h-5" /> Finca Hato Grande, Suesca</p>
+                                <p><Icons.Email className="w-5 h-5" /> ventas@hatogrande.com</p>
+                                <p><Icons.Phone className="w-5 h-5" /> +57 310 123 4567</p>
                             </div>
                         </div>
                     </div>
-
-
-                    {/* Right Side: Form */}
-                    <div className="w-full lg:w-3/5 p-8 md:p-12">
+                    <div className="hg-card__panel hg-card__panel--forms">
                         {isSubmitted ? (
-                             <div className="text-center flex flex-col items-center justify-center h-full">
-                                <Icons.Success className="w-24 h-24 text-green-500 mb-4" />
-                                <h3 className="text-2xl font-bold text-[var(--color-dark)]">¡Mensaje enviado!</h3>
-                                <p className="mt-2 text-[var(--color-text)] max-w-sm">Gracias por contactarnos. Hemos recibido tu mensaje y nuestro equipo se pondrá en contacto contigo a la brevedad.</p>
-                                <button
-                                    onClick={resetForm}
-                                    className="mt-8 w-full max-w-xs px-6 py-3 bg-[var(--color-primary)] text-[var(--color-dark)] font-bold rounded-lg hover:bg-[var(--color-accent)] transition-colors text-lg"
-                                >
-                                    ENVIAR OTRO MENSAJE
-                                </button>
+                            <div className="hg-success">
+                                <Icons.Success className="w-20 h-20" />
+                                <h3>¡Mensaje enviado!</h3>
+                                <p>Gracias por contactarnos. Te responderemos a la brevedad.</p>
+                                <button onClick={resetForm} className="hg-btn hg-btn--primary" type="button">Enviar otro mensaje</button>
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} noValidate>
-                                <h3 className="text-2xl font-bold text-[var(--color-dark)] mb-6">Tipo de Contacto</h3>
-                                <div className="grid grid-cols-2 gap-3 mb-6">
+                                <h3 className="hg-section">Tipo de contacto</h3>
+                                <div className="hg-type-grid">
                                     {contactTypes.map(({ id, label }) => (
                                         <button
-                                            key={id} type="button" onClick={() => handleTypeSelect(id)}
-                                            className={`p-3 text-center rounded-lg border-2 transition-all duration-300 font-semibold ${formData.type === id ? 'bg-[var(--color-primary)] text-[var(--color-dark)] border-[var(--color-primary)]' : 'bg-gray-100 text-[var(--color-text)] border-gray-200 hover:border-gray-400'}`}
+                                            key={id}
+                                            type="button"
+                                            onClick={() => handleTypeSelect(id)}
+                                            className={`hg-type ${formData.type === id ? 'is-active' : ''}`}
                                         >{label}</button>
                                     ))}
                                 </div>
-                                {errors.type && <p className="text-red-600 text-xs -mt-4 mb-4">{errors.type}</p>}
-                                
-                                <div className="grid md:grid-cols-2 gap-x-6">
+                                {errors.type && <p className="hg-error">{errors.type}</p>}
+
+                                <div className="hg-grid-2">
                                     <InputField icon={<Icons.User className="w-5 h-5"/>} name="name" placeholder="Nombre completo" value={formData.name} onChange={handleChange} error={errors.name} />
                                     <InputField icon={<Icons.Email className="w-5 h-5"/>} name="email" placeholder="Correo electrónico" value={formData.email} onChange={handleChange} error={errors.email} />
                                     <InputField icon={<Icons.Phone className="w-5 h-5"/>} name="phone" placeholder="Teléfono" value={formData.phone} onChange={handleChange} error={errors.phone} />
                                     <InputField icon={<Icons.City className="w-5 h-5"/>} name="city" placeholder="Ciudad" value={formData.city} onChange={handleChange} error={errors.city} />
                                 </div>
 
-                                <div className="relative mt-4">
-                                     <textarea
+                                <div className="hg-field">
+                                    <label className="hg-label">Mensaje</label>
+                                    <textarea
                                         name="message"
                                         rows={5}
                                         placeholder="Escribe tu mensaje aquí..."
                                         value={formData.message}
                                         onChange={handleChange}
-                                        className={`w-full p-4 bg-gray-100 border-2 rounded-lg focus:outline-none transition-colors duration-300 ${errors.message ? 'border-red-500' : 'border-gray-200 focus:border-[var(--color-secondary)]'}`}
+                                        className={`hg-input${errors.message ? ' hg-input--error' : ''}`}
                                     ></textarea>
-                                    {errors.message && <p className="text-red-600 text-xs mt-1">{errors.message}</p>}
+                                    {errors.message && <p className="hg-error">{errors.message}</p>}
                                 </div>
 
-                                <button type="submit" className="mt-6 w-full px-6 py-4 bg-[var(--color-primary)] text-[var(--color-dark)] font-bold rounded-lg hover:bg-[var(--color-accent)] transition-colors text-lg">
-                                    ENVIAR MENSAJE
-                                </button>
+                                <button type="submit" className="hg-btn hg-btn--accent">Enviar mensaje</button>
                             </form>
                         )}
                     </div>
                 </div>
             </div>
+            <style>{`
+                .hg-auth { position: relative; min-height: calc(100vh - 160px); display: flex; align-items: center; justify-content: center; padding: 48px 16px; overflow: hidden; }
+                .hg-stage { position: relative; z-index: 2; width: 100%; max-width: 1100px; display: flex; justify-content: center; }
+                .hg-backdrop { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+                .hg-backdrop__sun { position: absolute; width: 520px; height: 520px; left: -120px; top: -160px; background: radial-gradient(circle at 60% 50%, rgba(217,184,20,0.35), rgba(217,165,11,0.15) 45%, rgba(217,165,11,0.05) 70%, transparent 75%); filter: blur(2px); border-radius: 50%; }
+                .hg-backdrop__hill { position: absolute; left: -10%; right: -10%; height: 38%; bottom: -8%; background: linear-gradient(180deg, rgba(89,67,2,0.15), rgba(89,67,2,0.28)); border-top-left-radius: 50% 100%; border-top-right-radius: 50% 100%; }
+                .hg-backdrop__hill--far { transform: translateY(18px) scale(1.08); opacity: 0.65; }
+                .hg-backdrop__hill--near { transform: translateY(0); opacity: 0.9; }
+                .hg-backdrop__grain { position: absolute; inset: 0; background-image: linear-gradient(transparent 96%, rgba(0,0,0,0.02) 100%), radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px); background-size: 100% 6px, 6px 6px; mix-blend-mode: multiply; opacity: 0.6; }
+                .hg-card { display: grid; grid-template-columns: 1.1fr 1.4fr; width: 100%; gap: 0; border-radius: 18px; overflow: hidden; position: relative; }
+                .hg-card--glass { background: linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0.24)); border: 1px solid rgba(255,255,255,0.35); box-shadow: 0 20px 50px rgba(64,52,52,0.18), inset 0 1px 0 rgba(255,255,255,0.4); backdrop-filter: saturate(120%) blur(14px); -webkit-backdrop-filter: saturate(120%) blur(14px); }
+                .hg-card__panel { padding: 28px; }
+                .hg-card__panel--brand { background: linear-gradient(180deg, rgba(217,184,20,0.22), rgba(217,165,11,0.10)); }
+                .hg-card__panel--forms { background: rgba(255,255,255,0.65); }
+                .hg-brand { max-width: 420px; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+                .hg-badge { display: inline-block; align-self: flex-start; padding: 6px 10px; border-radius: 999px; background: rgba(89,67,2,0.08); color: var(--color-secondary); font-weight: 600; font-size: 12px; letter-spacing: 0.4px; }
+                .hg-brand__title { margin: 0; font-size: 28px; line-height: 1.2; color: var(--color-dark); }
+                .hg-brand__copy { color: var(--color-text); margin: 0; opacity: 0.9; }
+                .hg-contact-info { margin-top: 6px; color: var(--color-secondary); }
+                .hg-contact-info p { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+                .hg-section { margin: 0 0 12px; font-size: 20px; color: var(--color-dark); }
+                .hg-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+                .hg-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+                .hg-type { padding: 10px 12px; border-radius: 10px; border: 2px solid rgba(64,52,52,0.18); background: rgba(255,255,255,0.6); font-weight: 700; color: var(--color-text); cursor: pointer; }
+                .hg-type.is-active { background: var(--color-primary); color: var(--color-dark); border-color: var(--color-primary); }
+                .hg-field { margin: 10px 0; }
+                .hg-label { display: block; font-weight: 700; font-size: 13px; color: var(--color-dark); margin-bottom: 6px; }
+                .hg-input { width: 100%; padding: 12px 14px; border: 1px solid rgba(64,52,52,0.22); border-radius: 10px; background: #fff; color: #424242; outline: none; transition: box-shadow 180ms ease, border-color 180ms ease; }
+                .hg-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(217,184,20,0.25); }
+                .hg-input--error { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.15); }
+                .hg-error { color: #b91c1c; font-size: 12px; margin: 4px 0 0; }
+                .hg-btn { width: 100%; padding: 12px 16px; border-radius: 999px; border: none; font-weight: 700; color: var(--color-dark); cursor: pointer; transition: transform 120ms ease, box-shadow 180ms ease, background 180ms ease; box-shadow: 0 8px 16px rgba(64,52,52,0.08); margin-top: 12px; }
+                .hg-btn--primary { background: var(--color-primary); }
+                .hg-btn--primary:hover { background: var(--color-accent); }
+                .hg-btn--accent { background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); }
+                .hg-btn--accent:hover { filter: brightness(1.02); }
+                .hg-success { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+                @media (max-width: 960px) { .hg-card { grid-template-columns: 1fr; } .hg-grid-2, .hg-type-grid { grid-template-columns: 1fr; } }
+            `}</style>
         </div>
     );
 };

@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AsientoContable, Partida, initialAsientos } from '../../data/contabilidadData';
+import { OrionUser } from '../../data/internalUsers';
+
 
 // --- ICONS ---
 const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" /></svg>);
 const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>);
 const ArrowIcon = (props: { isExpanded: boolean } & React.SVGProps<SVGSVGElement>) => (<svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform duration-200 ${props.isExpanded ? 'rotate-90' : ''}`}><polyline points="9 18 15 12 9 6"></polyline></svg>);
+const ViewIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+const PdfIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
+const EditIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 
 const ASIENTOS_STORAGE_KEY = 'orionAsientosContables';
 const CONSECUTIVOS_STORAGE_KEY = 'orionContabilidadConsecutivos';
@@ -22,9 +27,14 @@ const formatConsecutivo = (tipo: TipoAsiento | '', numero: number): string => {
     return `${prefix} - ${String(numero).padStart(3, '0')}`;
 };
 
+const isSameMonthAndYear = (date1: Date, date2: Date): boolean => {
+    return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth();
+};
+
 const Contabilidad: React.FC = () => {
     const [asientos, setAsientos] = useState<AsientoContable[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingAsiento, setEditingAsiento] = useState<AsientoContable | null>(null);
     const [expandedRows, setExpandedRows] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     
@@ -38,16 +48,14 @@ const Contabilidad: React.FC = () => {
                 localStorage.setItem(ASIENTOS_STORAGE_KEY, JSON.stringify(initialAsientos));
             }
 
-            // Initialize consecutive counters if they don't exist
             const storedConsecutivos = localStorage.getItem(CONSECUTIVOS_STORAGE_KEY);
             if (!storedConsecutivos) {
                  localStorage.setItem(CONSECUTIVOS_STORAGE_KEY, JSON.stringify({
-                    'Egresos': 1,
-                    'Recibos de Caja': 1,
-                    'Comprobante Contable': 1
+                    'Egresos': initialAsientos.filter(a => a.tipo === 'Egresos').length,
+                    'Recibos de Caja': initialAsientos.filter(a => a.tipo === 'Recibos de Caja').length,
+                    'Comprobante Contable': initialAsientos.filter(a => a.tipo === 'Comprobante Contable').length
                 }));
             }
-
         } catch (error) {
             console.error("Failed to load accounting entries", error);
             setAsientos(initialAsientos);
@@ -64,28 +72,44 @@ const Contabilidad: React.FC = () => {
                     asiento.id.toLowerCase().includes(lowerSearch) ||
                     asiento.tipo.toLowerCase().includes(lowerSearch) ||
                     formatConsecutivo(asiento.tipo, asiento.consecutivo).toLowerCase().replace(/\s/g, '').includes(lowerSearch) ||
+                    asiento.creadoPor.toLowerCase().includes(lowerSearch) ||
                     asiento.partidas.some(p => p.cuenta.toLowerCase().includes(lowerSearch) || p.descripcion.toLowerCase().includes(lowerSearch))
                 );
             })
             .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     }, [asientos, searchTerm]);
     
-    const handleAddAsiento = (newAsiento: AsientoContable) => {
-        // Update asientos list
-        const updatedAsientos = [...asientos, newAsiento];
-        setAsientos(updatedAsientos);
-        localStorage.setItem(ASIENTOS_STORAGE_KEY, JSON.stringify(updatedAsientos));
+    const handleSaveAsiento = (asientoToSave: AsientoContable) => {
+        const isUpdating = asientos.some(a => a.id === asientoToSave.id);
+        let updatedAsientos;
 
-        // Update consecutive counter
-        try {
-            const storedConsecutivos = JSON.parse(localStorage.getItem(CONSECUTIVOS_STORAGE_KEY) || '{}');
-            storedConsecutivos[newAsiento.tipo] = newAsiento.consecutivo;
-            localStorage.setItem(CONSECUTIVOS_STORAGE_KEY, JSON.stringify(storedConsecutivos));
-        } catch (error) {
-            console.error("Failed to update consecutive counter", error);
+        if (isUpdating) {
+            updatedAsientos = asientos.map(a => a.id === asientoToSave.id ? asientoToSave : a);
+        } else {
+            updatedAsientos = [...asientos, asientoToSave];
+            try {
+                const storedConsecutivos = JSON.parse(localStorage.getItem(CONSECUTIVOS_STORAGE_KEY) || '{}');
+                storedConsecutivos[asientoToSave.tipo] = asientoToSave.consecutivo;
+                localStorage.setItem(CONSECUTIVOS_STORAGE_KEY, JSON.stringify(storedConsecutivos));
+            } catch (error) {
+                console.error("Failed to update consecutive counter", error);
+            }
         }
         
+        setAsientos(updatedAsientos);
+        localStorage.setItem(ASIENTOS_STORAGE_KEY, JSON.stringify(updatedAsientos));
+        
         setIsModalOpen(false);
+        setEditingAsiento(null);
+    };
+
+    const handleOpenEditModal = (asiento: AsientoContable) => {
+        setEditingAsiento(asiento);
+        setIsModalOpen(true);
+    };
+    
+    const handleExportPDF = (asiento: AsientoContable) => {
+        alert(`Generando PDF para el asiento ${formatConsecutivo(asiento.tipo, asiento.consecutivo)}...`);
     };
 
     const handleToggleRow = (asientoId: string) => {
@@ -106,7 +130,7 @@ const Contabilidad: React.FC = () => {
                     <p className="text-sm text-[var(--text-secondary)]">Registro y consulta de asientos contables.</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => { setEditingAsiento(null); setIsModalOpen(true); }}
                     className="mt-2 sm:mt-0 inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[var(--secondary-green)] hover:opacity-90">
                     <PlusIcon className="mr-2" /> Nuevo Asiento
                 </button>
@@ -114,7 +138,7 @@ const Contabilidad: React.FC = () => {
 
             <input
                 type="text"
-                placeholder="Buscar por concepto, tipo, consecutivo, cuenta..."
+                placeholder="Buscar por concepto, tipo, consecutivo, usuario, cuenta..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 border border-[var(--border-color)] rounded-md text-sm bg-[var(--bg-main)] text-[var(--text-primary)] focus:ring-2 focus:ring-[var(--secondary-green)] outline-none flex-shrink-0"
@@ -129,16 +153,15 @@ const Contabilidad: React.FC = () => {
                             <th scope="col" className="py-3 px-6">Tipo</th>
                             <th scope="col" className="py-3 px-6">Consecutivo</th>
                             <th scope="col" className="py-3 px-6">Concepto</th>
-                            <th scope="col" className="py-3 px-6 text-right">Total Débito</th>
-                            <th scope="col" className="py-3 px-6 text-right">Total Crédito</th>
+                            <th scope="col" className="py-3 px-6">Creado Por</th>
+                            <th scope="col" className="py-3 px-6">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredAsientos.map(asiento => {
-                            const totalDebito = asiento.partidas.reduce((sum, p) => sum + p.debito, 0);
-                            const totalCredito = asiento.partidas.reduce((sum, p) => sum + p.credito, 0);
                             const isExpanded = expandedRows.includes(asiento.id);
-                            
+                            const canEdit = isSameMonthAndYear(new Date(), new Date(asiento.fecha));
+
                             return (
                                 <React.Fragment key={asiento.id}>
                                     <tr className="border-b border-[var(--border-color)] hover:bg-[var(--bg-main)]/50">
@@ -149,13 +172,33 @@ const Contabilidad: React.FC = () => {
                                         <td className="py-3 px-6 font-medium text-[var(--text-primary)]">{asiento.tipo}</td>
                                         <td className="py-3 px-6">{formatConsecutivo(asiento.tipo, asiento.consecutivo)}</td>
                                         <td className="py-3 px-6 max-w-sm truncate" title={asiento.concepto}>{asiento.concepto}</td>
-                                        <td className="py-3 px-6 text-right">{formatCurrency(totalDebito)}</td>
-                                        <td className="py-3 px-6 text-right">{formatCurrency(totalCredito)}</td>
+                                        <td className="py-3 px-6">{asiento.creadoPor}</td>
+                                        <td className="py-3 px-6">
+                                            <div className="flex items-center gap-3">
+                                                <button onClick={() => handleToggleRow(asiento.id)} title="Ver Detalle" className="text-gray-500 hover:text-gray-700"><ViewIcon /></button>
+                                                <button onClick={() => handleExportPDF(asiento)} title="Exportar a PDF" className="text-gray-500 hover:text-gray-700"><PdfIcon /></button>
+                                                <button 
+                                                    onClick={() => handleOpenEditModal(asiento)} 
+                                                    title={canEdit ? "Modificar Asiento" : "No se puede editar asientos de meses anteriores"}
+                                                    disabled={!canEdit}
+                                                    className="text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                >
+                                                    <EditIcon />
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                     {isExpanded && (
                                         <tr className="bg-[var(--bg-main)]/30">
                                             <td colSpan={7} className="p-0">
                                                 <div className="p-4">
+                                                     <div className="flex justify-between items-center mb-2 font-bold text-base">
+                                                        <span>Detalle del Asiento</span>
+                                                        <div className="grid grid-cols-2 gap-x-8 text-right">
+                                                            <span>{formatCurrency(asiento.partidas.reduce((s, p) => s + p.debito, 0))}</span>
+                                                            <span>{formatCurrency(asiento.partidas.reduce((s, p) => s + p.credito, 0))}</span>
+                                                        </div>
+                                                     </div>
                                                     <table className="w-full text-xs">
                                                         <thead className="font-bold">
                                                             <tr>
@@ -187,17 +230,19 @@ const Contabilidad: React.FC = () => {
                 </table>
             </div>
             
-            {isModalOpen && <NuevoAsientoModal onClose={() => setIsModalOpen(false)} onSave={handleAddAsiento} />}
+            {isModalOpen && <NuevoAsientoModal onClose={() => { setIsModalOpen(false); setEditingAsiento(null); }} onSave={handleSaveAsiento} asientoToEdit={editingAsiento} />}
         </div>
     );
 };
 
-// --- Modal Component for New Entry ---
+// --- Modal Component for New/Edit Entry ---
 interface NuevoAsientoModalProps {
     onClose: () => void;
-    onSave: (newAsiento: AsientoContable) => void;
+    onSave: (asiento: AsientoContable) => void;
+    asientoToEdit: AsientoContable | null;
 }
-const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave }) => {
+const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave, asientoToEdit }) => {
+    const isEditMode = !!asientoToEdit;
     const [tipo, setTipo] = useState<TipoAsiento | ''>('');
     const [consecutivo, setConsecutivo] = useState<number>(0);
     const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
@@ -206,9 +251,19 @@ const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave }
         { cuenta: '', descripcion: '', debito: 0, credito: 0 },
         { cuenta: '', descripcion: '', debito: 0, credito: 0 },
     ]);
+    
+    useEffect(() => {
+        if (asientoToEdit) {
+            setTipo(asientoToEdit.tipo);
+            setConsecutivo(asientoToEdit.consecutivo);
+            setFecha(asientoToEdit.fecha);
+            setConcepto(asientoToEdit.concepto);
+            setPartidas(asientoToEdit.partidas.map(({ id, ...rest }) => rest)); // Remove id for editing
+        }
+    }, [asientoToEdit]);
 
     useEffect(() => {
-        if (tipo) {
+        if (tipo && !isEditMode) {
             try {
                 const storedConsecutivos = JSON.parse(localStorage.getItem(CONSECUTIVOS_STORAGE_KEY) || '{}');
                 const nextConsecutivo = (storedConsecutivos[tipo] || 0) + 1;
@@ -217,10 +272,10 @@ const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave }
                 console.error("Failed to get next consecutive", error);
                 setConsecutivo(1);
             }
-        } else {
+        } else if (!tipo) {
             setConsecutivo(0);
         }
-    }, [tipo]);
+    }, [tipo, isEditMode]);
 
 
     const handlePartidaChange = (index: number, field: keyof Omit<Partida, 'id'>, value: string | number) => {
@@ -259,15 +314,20 @@ const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave }
             return;
         }
         
-        const newAsiento: AsientoContable = {
-            id: `AS-${Date.now()}`,
+        const currentUserRaw = sessionStorage.getItem('orionCurrentUser');
+        const currentUser: OrionUser | null = currentUserRaw ? JSON.parse(currentUserRaw) : null;
+        const userName = currentUser ? `${currentUser.nombre || ''} ${currentUser.apellidos || ''}`.trim() || currentUser.username : 'Sistema';
+
+        const asientoData: AsientoContable = {
+            id: isEditMode ? asientoToEdit.id : `AS-${Date.now()}`,
             fecha,
             concepto,
             tipo,
-            consecutivo,
+            consecutivo: isEditMode ? asientoToEdit.consecutivo : consecutivo,
             partidas: partidas.map((p, i) => ({ ...p, id: Date.now() + i })),
+            creadoPor: userName,
         };
-        onSave(newAsiento);
+        onSave(asientoData);
     };
 
     const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
@@ -275,12 +335,12 @@ const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave }
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-[var(--bg-card)] rounded-lg shadow-xl p-6 w-full max-w-4xl h-[90vh] flex flex-col">
-                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex-shrink-0">Crear Nuevo Asiento Contable</h3>
+                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex-shrink-0">{isEditMode ? 'Editar Asiento Contable' : 'Crear Nuevo Asiento Contable'}</h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 flex-shrink-0">
                     <div>
                         <label className="text-sm font-medium">Tipo de Asiento</label>
-                        <select value={tipo} onChange={e => setTipo(e.target.value as TipoAsiento)} className="w-full bg-[var(--bg-main)] p-2 border rounded-md">
+                        <select value={tipo} onChange={e => setTipo(e.target.value as TipoAsiento)} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" disabled={isEditMode}>
                             <option value="">Seleccione...</option>
                             <option value="Egresos">Egresos</option>
                             <option value="Recibos de Caja">Recibos de Caja</option>
@@ -315,14 +375,22 @@ const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave }
                 </div>
 
                 <div className="flex justify-between items-center pt-4 font-bold text-lg flex-shrink-0">
-                    <div className={`p-2 rounded ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
-                        {isBalanced ? 'Asiento Balanceado' : 'Asiento Desbalanceado'}
+                    <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
+                            {isBalanced ? 'Asiento Balanceado' : 'Asiento Desbalanceado'}
+                        </div>
+                        {!isBalanced && (
+                            <div className="text-red-600 text-base font-medium">
+                                Diferencia: {formatCurrency(Math.abs(totalDebito - totalCredito))}
+                            </div>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-x-8 text-right">
                         <span>{formatCurrency(totalDebito)}</span>
                         <span>{formatCurrency(totalCredito)}</span>
                     </div>
                 </div>
+
 
                 <div className="mt-6 flex justify-end gap-3 flex-shrink-0">
                     <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg hover:opacity-80">Cancelar</button>

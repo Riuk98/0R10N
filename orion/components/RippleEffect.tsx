@@ -58,8 +58,8 @@ const RippleSpan = styled.span<{ color: string; duration: number; size: number; 
 // El componente funcional principal. Se le asignan valores por defecto a las props.
 const RippleEffect: React.FC<RippleEffectProps> = ({
     color = '#97b3e9',
-    duration = 35, // en segundos
-    size = 45000, // en píxeles
+    duration = 5, // en segundos
+    size = 4500, // en píxeles
     interval = 4000, // en milisegundos
 }) => {
     // Estado para almacenar el array de ondas activas en la pantalla.

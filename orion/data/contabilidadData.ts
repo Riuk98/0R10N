@@ -15,6 +15,7 @@ export interface AsientoContable {
     tipo: 'Egresos' | 'Recibos de Caja' | 'Comprobante Contable';
     consecutivo: number;
     partidas: Partida[];
+    creadoPor: string; // User who created/last modified the entry
 }
 
 export const initialAsientos: AsientoContable[] = [
@@ -27,7 +28,8 @@ export const initialAsientos: AsientoContable[] = [
         partidas: [
             { id: 1, cuenta: '110505 - Caja General', descripcion: 'Ingreso por venta', debito: 500000, credito: 0 },
             { id: 2, cuenta: '4135 - Ingresos por Venta', descripcion: 'Venta de mercancía', debito: 0, credito: 500000 },
-        ]
+        ],
+        creadoPor: 'Sofia Finanzas'
     },
     {
         id: 'AS-0002',
@@ -38,7 +40,8 @@ export const initialAsientos: AsientoContable[] = [
         partidas: [
             { id: 1, cuenta: '1435 - Mercancías no fabricadas', descripcion: 'Compra de leche cruda', debito: 1200000, credito: 0 },
             { id: 2, cuenta: '2205 - Proveedores Nacionales', descripcion: 'Cta por pagar a Insumos del Campo', debito: 0, credito: 1200000 },
-        ]
+        ],
+        creadoPor: 'Sofia Finanzas'
     },
     {
         id: 'AS-0003',
@@ -49,6 +52,7 @@ export const initialAsientos: AsientoContable[] = [
         partidas: [
             { id: 1, cuenta: '5135 - Servicios Públicos', descripcion: 'Gasto energía mes de Julio', debito: 450000, credito: 0 },
             { id: 2, cuenta: '111005 - Bancos', descripcion: 'Salida de dinero de Bancolombia', debito: 0, credito: 450000 },
-        ]
+        ],
+        creadoPor: 'Martha Milena'
     }
 ];
