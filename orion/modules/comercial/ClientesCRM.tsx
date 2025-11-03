@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 
 // --- ICONS ---
@@ -363,8 +362,24 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions }) => {
     };
     
     const handleCreatePedido = () => {
+        const detailPayload: { title: string, props?: any } = {
+            title: 'Crear Pedido'
+        };
+    
+        if (formData.nombre) {
+            detailPayload.props = {
+                clientData: {
+                    nombre: formData.nombre,
+                    nit: formData.nit,
+                    direccion: formData.direccion,
+                    telefono: formData.telefono,
+                    email: formData.email,
+                }
+            };
+        }
+    
         window.dispatchEvent(new CustomEvent('createOrionWindow', {
-            detail: { title: 'Crear Pedido' }
+            detail: detailPayload
         }));
     };
 

@@ -174,8 +174,8 @@ const Checkout: React.FC = () => {
 
                     <AccordionSection title="INFORMACIÓN DE ENVÍO" number={2} isOpen={openSection === 'shipping'} onToggle={() => setOpenSection('shipping')}>
                         <div className="flex gap-4 mb-6">
-                            <button onClick={() => setDeliveryMethod('domicilio')} className={`flex-1 p-3 rounded-lg border-2 ${deliveryMethod === 'domicilio' ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : ''}`}>Envío a Domicilio</button>
-                            <button onClick={() => setDeliveryMethod('tienda')} className={`flex-1 p-3 rounded-lg border-2 ${deliveryMethod === 'tienda' ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : ''}`}>Entrega en Tienda</button>
+                            <button onClick={() => setDeliveryMethod('domicilio')} className={`flex-1 p-3 rounded-lg border-2 ${deliveryMethod === 'domicilio' ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-text)]' : ''}`}>Envío a Domicilio</button>
+                            <button onClick={() => setDeliveryMethod('tienda')} className={`flex-1 p-3 rounded-lg border-2 ${deliveryMethod === 'tienda' ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-text)]' : ''}`}>Entrega en Tienda</button>
                         </div>
                         {deliveryMethod === 'domicilio' ? (
                             <div className="grid grid-cols-2 gap-4">

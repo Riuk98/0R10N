@@ -127,7 +127,7 @@ const ModuleContent: React.FC<{
         case 'Terceros (CRM)': return <ClientesCRM permissions={permissions} />;
         case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
         case 'Soporte (PQR)': return <SoportePQR />;
-        case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} />;
+        case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} />;
         case 'Editar Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} />;
         case 'Generar Ticket': return <CrearTicket onClose={onClose} />;
         case 'Facturación': return <Facturacion onClose={onClose} {...props} />;
@@ -277,18 +277,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const [internalUsers, setInternalUsers] = useState<OrionUser[]>([]);
     const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
 
+    const [currentUser, setCurrentUser] = useState<OrionUser | null>(null);
+
     // Unified, role-based permission state
     const [userPermissions, setUserPermissions] = useState<Record<string, Record<string, boolean>>>({});
     const PERMISSIONS_BY_ROLE_STORAGE_KEY = 'permisosPorRol';
     
     // Effect to load permissions based on the logged-in user's role
     useEffect(() => {
-        const loadPermissions = () => {
+        const loadUserAndPermissions = () => {
             try {
                 const currentUserRaw = sessionStorage.getItem('orionCurrentUser');
-                const currentUser: OrionUser | null = currentUserRaw ? JSON.parse(currentUserRaw) : null;
+                const user: OrionUser | null = currentUserRaw ? JSON.parse(currentUserRaw) : null;
+                setCurrentUser(user);
                 
-                if (!currentUser || !currentUser.role) {
+                if (!user || !user.role) {
                     setUserPermissions({}); // No user or role, no permissions
                     return;
                 }
@@ -301,10 +304,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     localStorage.setItem(PERMISSIONS_BY_ROLE_STORAGE_KEY, JSON.stringify(defaultPermissionsByRole));
                 }
                 
-                const rolePermissions = allPermissions[currentUser.role];
+                const rolePermissions = allPermissions[user.role];
                 
                 // Set permissions for the current user's role. Fallback to Admin defaults if something is wrong.
-                setUserPermissions(rolePermissions || (currentUser.role === 'Administrador' ? defaultPermissionsByRole['Administrador'] : {}));
+                setUserPermissions(rolePermissions || (user.role === 'Administrador' ? defaultPermissionsByRole['Administrador'] : {}));
 
             } catch (error) {
                 console.error("Failed to load permissions from localStorage", error);
@@ -312,10 +315,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             }
         };
 
-        loadPermissions();
+        loadUserAndPermissions();
         // Listen for changes in storage (e.g., from the permissions module)
-        window.addEventListener('storage', loadPermissions); 
-        return () => window.removeEventListener('storage', loadPermissions);
+        window.addEventListener('storage', loadUserAndPermissions); 
+        return () => window.removeEventListener('storage', loadUserAndPermissions);
     }, []);
 
 
@@ -806,7 +809,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     <Switch onChange={toggleTheme} checked={theme === 'dark'} />
                     <div className="relative" ref={userMenuRef}>
                         <div id="user-info-toggle" onClick={() => setUserMenuOpen(!userMenuOpen)} className="user-info">
-                            <span className="user-name hidden md:inline">Martha Milena</span>
+                            <span className="user-name hidden md:inline">
+                                {currentUser
+                                    ? `${currentUser.nombre || ''} ${currentUser.apellidos || ''}`.trim() || currentUser.username
+                                    : 'Usuario'
+                                }
+                            </span>
                             <div className="user-icon">
                                 <Icons.User/>
                             </div>

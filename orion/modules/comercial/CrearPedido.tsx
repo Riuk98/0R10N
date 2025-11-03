@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { products as productList } from '../../../hatogrande/data';
 
@@ -31,6 +30,7 @@ interface CrearPedidoProps {
     onClose: () => void;
     permissions?: Record<string, boolean>;
     orderToEdit?: any;
+    clientData?: any;
 }
 
 interface OrderItem {
@@ -45,7 +45,6 @@ interface OrderItem {
 
 const getNewOrderId = () => {
     let lastId = parseInt(localStorage.getItem('lastOrderId') || '0', 10);
-    lastId++;
     localStorage.setItem('lastOrderId', lastId.toString());
     return `CO-${String(lastId).padStart(6, '0')}`;
 };
@@ -75,7 +74,7 @@ const ActionButton = ({ icon, title, onClick, disabled }: { icon: React.ReactNod
     </button>
 );
 
-const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderToEdit }) => {
+const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderToEdit, clientData }) => {
     const isEditMode = !!orderToEdit;
     const [orderId, setOrderId] = useState('');
     const [client, setClient] = useState({ nombre: '', nit: '', direccion: '', telefono: '', email: '' });
@@ -136,6 +135,19 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
             setOrderId(getNewOrderId());
         }
     }, [isEditMode, orderToEdit]);
+
+    useEffect(() => {
+        // Only apply clientData if we are NOT in edit mode and clientData is provided.
+        if (!isEditMode && clientData) {
+            setClient({
+                nombre: clientData.nombre || '',
+                nit: clientData.nit || '',
+                direccion: clientData.direccion || '',
+                telefono: clientData.telefono || '',
+                email: clientData.email || '',
+            });
+        }
+    }, [clientData, isEditMode]);
 
 
     useEffect(() => {
@@ -427,6 +439,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
                 <div className="pt-4 mt-4 border-t border-[var(--border-color)] flex justify-end items-center">
                     <div className="flex items-center gap-2">
                         <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSimpleSave} disabled={(!permissions?.crear && !isEditMode) || (!permissions?.actualizar && isEditMode) || isConfirmed} />
+                        lastId++;
                         <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" disabled={!permissions?.eliminar || isConfirmed} />
                         <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" disabled={!permissions?.actualizar || isConfirmed} />
                         <ActionButton icon={<CheckIcon className="w-5 h-5 text-green-600"/>} title="Confirmar" onClick={handleConfirmAndInvoice} disabled={!permissions?.crear || isConfirmed} />
