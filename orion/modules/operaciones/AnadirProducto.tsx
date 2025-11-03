@@ -4,11 +4,10 @@ import { OrionProduct } from './Inventario';
 
 interface AnadirProductoProps {
     onClose: () => void;
+    onAddProduct: (newProduct: OrionProduct) => void;
 }
 
-const ORION_PRODUCTS_STORAGE_KEY = 'orionProducts';
-
-const AnadirProducto: React.FC<AnadirProductoProps> = ({ onClose }) => {
+const AnadirProducto: React.FC<AnadirProductoProps> = ({ onClose, onAddProduct }) => {
     const [formData, setFormData] = useState<Omit<OrionProduct, 'id'>>({
         codigo: '',
         nombre: '',
@@ -34,6 +33,7 @@ const AnadirProducto: React.FC<AnadirProductoProps> = ({ onClose }) => {
     const validate = () => {
         const newErrors: any = {};
         if (!formData.codigo) newErrors.codigo = 'Código es requerido.';
+        // In a real app, you'd check for uniqueness here by accessing the central state
         if (!formData.nombre) newErrors.nombre = 'Nombre es requerido.';
         if (formData.cantidad < 0) newErrors.cantidad = 'Cantidad no puede ser negativa.';
         if (formData.valorUnitario <= 0) newErrors.valorUnitario = 'Valor debe ser positivo.';
@@ -48,23 +48,11 @@ const AnadirProducto: React.FC<AnadirProductoProps> = ({ onClose }) => {
         e.preventDefault();
         if (validate()) {
             try {
-                const storedProductsRaw = localStorage.getItem(ORION_PRODUCTS_STORAGE_KEY);
-                const storedProducts: OrionProduct[] = storedProductsRaw ? JSON.parse(storedProductsRaw) : [];
-
-                const existingProduct = storedProducts.find(p => p.id === formData.codigo);
-                if (existingProduct) {
-                    setErrors({ codigo: 'Este código de producto ya existe.' });
-                    return;
-                }
-
                 const newProduct: OrionProduct = {
                     id: formData.codigo, // Using codigo as the unique ID
                     ...formData
                 };
-                
-                storedProducts.push(newProduct);
-                localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(storedProducts));
-                window.dispatchEvent(new Event('storage')); // Notify other windows
+                onAddProduct(newProduct);
                 onClose();
             } catch (error) {
                 console.error("Failed to save product:", error);

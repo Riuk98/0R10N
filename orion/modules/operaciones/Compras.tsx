@@ -1,5 +1,9 @@
+
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { OrionUser } from '../../data/internalUsers';
+import { OrionInsumo } from './Inventario';
+import { Tercero } from '../comercial/ClientesCRM';
 
 
 // --- DATA STRUCTURES & MOCKS ---
@@ -14,7 +18,7 @@ export interface ItemOrdenCompra {
 
 export interface OrdenCompra {
     id: string; // e.g., 'OC-0052'
-    proveedorId: number;
+    proveedorId: string;
     proveedorNombre: string;
     fechaEmision: string; // 'YYYY-MM-DD'
     fechaEsperada: string; // 'YYYY-MM-DD'
@@ -24,20 +28,6 @@ export interface OrdenCompra {
     observaciones?: string;
     creadoPor: string;
 }
-
-// Mock data, in a real app this would come from a shared state/context or API
-const mockProveedores = [
-    { id: 1, nombre: 'Insumos del Campo SAS', nit: '900.123.456-7' },
-    { id: 2, nombre: 'Empaques S.A.', nit: '800.789.123-4' },
-    { id: 3, nombre: 'Transportes Rápidos LTDA', nit: '801.234.567-8' }
-];
-
-const mockInsumos = [
-    { id: 'LTC-01', nombre: 'Leche Cruda Entera (Litro)', valorUnitario: 2000 },
-    { id: 'CJO-01', nombre: 'Cuajo (Gramo)', valorUnitario: 1000 },
-    { id: 'ENV-Y-1L', nombre: 'Envase Yogur 1L', valorUnitario: 600 },
-    { id: 'FRT-FR-KG', nombre: 'Fruta Fresa (Kg)', valorUnitario: 8000 },
-];
 
 const COMPRAS_STORAGE_KEY = 'orionOrdenesCompra';
 const OC_CONSECUTIVO_KEY = 'orionOCConsecutivo';
@@ -62,16 +52,17 @@ const getNextOCId = () => {
 };
 
 // --- MODAL COMPONENT ---
-interface OrdenCompraModalProps {
+interface OrdenCompraFormProps {
     onClose: () => void;
-    onSave: (orden: OrdenCompra) => void;
     ordenToEdit: OrdenCompra | null;
+    allInsumos: OrionInsumo[];
+    proveedores: Tercero[];
 }
 
-const OrdenCompraModal: React.FC<OrdenCompraModalProps> = ({ onClose, onSave, ordenToEdit }) => {
+export const OrdenCompraForm: React.FC<OrdenCompraFormProps> = ({ onClose, ordenToEdit, allInsumos, proveedores }) => {
     const isEditMode = !!ordenToEdit;
     const initialOrdenState = {
-        proveedorId: 0,
+        proveedorId: '',
         proveedorNombre: '',
         fechaEmision: new Date().toISOString().split('T')[0],
         fechaEsperada: '',
@@ -105,7 +96,7 @@ const OrdenCompraModal: React.FC<OrdenCompraModalProps> = ({ onClose, onSave, or
     }, [isEditMode, ordenToEdit]);
 
     const handleProveedorSearch = () => {
-        const found = mockProveedores.find(p => p.nombre.toLowerCase().includes(proveedorSearch.toLowerCase()) || p.nit.includes(proveedorSearch));
+        const found = proveedores.find(p => p.nombre.toLowerCase().includes(proveedorSearch.toLowerCase()) || p.nit.includes(proveedorSearch));
         if (found) {
             setOrden(prev => ({ ...prev, proveedorId: found.id, proveedorNombre: found.nombre }));
         } else {
@@ -113,10 +104,13 @@ const OrdenCompraModal: React.FC<OrdenCompraModalProps> = ({ onClose, onSave, or
         }
     };
 
-    const handleItemSearch = (id: string) => {
-        const found = mockInsumos.find(i => i.id.toLowerCase() === id.toLowerCase());
+    const handleInsumoSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedId = e.target.value;
+        const found = allInsumos.find(i => i.id === selectedId);
         if (found) {
-            setCurrentItem(prev => ({ ...prev, insumoId: found.id, insumoNombre: found.nombre, valorUnitario: found.valorUnitario }));
+            setCurrentItem(prev => ({ ...prev, insumoId: found.id, insumoNombre: found.nombre, valorUnitario: found.costoUnitario }));
+        } else {
+            setCurrentItem(prev => ({ ...prev, insumoId: '', insumoNombre: '', valorUnitario: 0 }));
         }
     };
 
@@ -157,126 +151,138 @@ const OrdenCompraModal: React.FC<OrdenCompraModalProps> = ({ onClose, onSave, or
             total,
             creadoPor: userName,
         };
-        onSave(finalOrden);
+        
+        try {
+            const storedData = JSON.parse(localStorage.getItem(COMPRAS_STORAGE_KEY) || '[]');
+            const isUpdating = storedData.some((o: OrdenCompra) => o.id === finalOrden.id);
+            const updatedData = isUpdating
+                ? storedData.map((o: OrdenCompra) => o.id === finalOrden.id ? finalOrden : o)
+                : [...storedData, finalOrden];
+            localStorage.setItem(COMPRAS_STORAGE_KEY, JSON.stringify(updatedData));
+            window.dispatchEvent(new Event('storage'));
+        } catch (error) {
+            console.error('Failed to save purchase order', error);
+        }
+        
+        onClose();
     };
 
     const contentIsReadOnly = isEditMode && ordenToEdit && (ordenToEdit.estado === 'Enviada' || ordenToEdit.estado === 'Recibida');
 
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-[var(--bg-card)] rounded-lg shadow-xl p-6 w-full max-w-5xl h-[95vh] flex flex-col">
-                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex-shrink-0">{isEditMode ? 'Editar' : 'Crear'} Orden de Compra</h3>
-                
-                {/* Header */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-[var(--border-color)] flex-shrink-0">
-                    <div>
-                        <label className="text-sm font-medium"># OC</label>
-                        <input type="text" value={ordenId} readOnly className="w-full bg-[var(--border-color)] p-2 border rounded-md cursor-not-allowed" />
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="text-sm font-medium">Proveedor</label>
-                        <div className="flex">
-                            <input type="text" value={proveedorSearch} onChange={e => setProveedorSearch(e.target.value)} className="w-full bg-[var(--bg-main)] p-2 border rounded-l-md" readOnly={contentIsReadOnly}/>
-                            <button onClick={handleProveedorSearch} className="p-2 bg-[var(--bg-main)] border rounded-r-md" disabled={contentIsReadOnly}><SearchIcon className="w-5 h-5"/></button>
-                        </div>
-                         {orden.proveedorNombre && <p className="text-xs mt-1 text-green-600">Seleccionado: {orden.proveedorNombre}</p>}
-                    </div>
-                     <div className="grid grid-cols-2 gap-4">
-                         <div>
-                            <label className="text-sm font-medium">F. Emisión</label>
-                            <input type="date" value={orden.fechaEmision} onChange={e => setOrden(prev => ({...prev, fechaEmision: e.target.value}))} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" readOnly={contentIsReadOnly} />
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium">F. Esperada</label>
-                            <input type="date" value={orden.fechaEsperada} onChange={e => setOrden(prev => ({...prev, fechaEsperada: e.target.value}))} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" readOnly={contentIsReadOnly} />
-                        </div>
-                    </div>
-                     {isEditMode && (
-                        <div className="md:col-start-1">
-                            <label className="text-sm font-medium">Estado</label>
-                             <select
-                                value={orden.estado}
-                                onChange={e => setOrden(prev => ({ ...prev, estado: e.target.value as OrdenCompra['estado'] }))}
-                                disabled={orden.estado === 'Recibida'}
-                                className="w-full bg-[var(--bg-main)] p-2 border rounded-md"
-                            >
-                                <option value="Borrador">Borrador</option>
-                                <option value="En Proceso">En Proceso</option>
-                                <option value="Enviada">Enviada</option>
-                                <option value="Recibida">Recibida</option>
-                            </select>
-                        </div>
-                    )}
+        <div className="bg-[var(--bg-card)] p-6 h-full flex flex-col">
+            <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex-shrink-0">{isEditMode ? 'Editar' : 'Crear'} Orden de Compra</h3>
+            
+            {/* Header */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-[var(--border-color)] flex-shrink-0">
+                <div>
+                    <label className="text-sm font-medium"># OC</label>
+                    <input type="text" value={ordenId} readOnly className="w-full bg-[var(--border-color)] p-2 border rounded-md cursor-not-allowed" />
                 </div>
-
-                {/* Add Item Form */}
-                {!contentIsReadOnly && (
-                    <div className="grid grid-cols-12 gap-2 items-end mb-4 flex-shrink-0">
-                        <div className="col-span-3">
-                            <label className="text-xs font-medium">Cód. Insumo</label>
-                            <input type="text" value={currentItem.insumoId} onChange={e => {setCurrentItem(prev => ({...prev, insumoId: e.target.value})); handleItemSearch(e.target.value);}} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
-                        </div>
-                        <div className="col-span-4">
-                            <label className="text-xs font-medium">Descripción</label>
-                            <input type="text" value={currentItem.insumoNombre} readOnly className="w-full bg-[var(--border-color)] p-1.5 border rounded-md text-sm" />
-                        </div>
-                        <div className="col-span-2">
-                            <label className="text-xs font-medium">Cantidad</label>
-                            <input type="number" value={currentItem.cantidad} onChange={e => setCurrentItem(prev => ({...prev, cantidad: parseInt(e.target.value) || 0}))} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
-                        </div>
-                        <div className="col-span-2">
-                            <label className="text-xs font-medium">Vlr. Unitario</label>
-                            <input type="number" value={currentItem.valorUnitario} onChange={e => setCurrentItem(prev => ({...prev, valorUnitario: parseFloat(e.target.value) || 0}))} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
-                        </div>
-                        <button onClick={handleAddItem} className="col-span-1 p-2 bg-[var(--bg-main)] rounded-md hover:opacity-80"><PlusIcon /></button>
+                <div className="md:col-span-2">
+                    <label className="text-sm font-medium">Proveedor</label>
+                    <div className="flex">
+                        <input type="text" value={proveedorSearch} onChange={e => setProveedorSearch(e.target.value)} className="w-full bg-[var(--bg-main)] p-2 border rounded-l-md" readOnly={contentIsReadOnly}/>
+                        <button onClick={handleProveedorSearch} className="p-2 bg-[var(--bg-main)] border rounded-r-md" disabled={contentIsReadOnly}><SearchIcon className="w-5 h-5"/></button>
+                    </div>
+                     {orden.proveedorNombre && <p className="text-xs mt-1 text-green-600">Seleccionado: {orden.proveedorNombre}</p>}
+                </div>
+                 <div className="grid grid-cols-2 gap-4">
+                     <div>
+                        <label className="text-sm font-medium">F. Emisión</label>
+                        <input type="date" value={orden.fechaEmision} onChange={e => setOrden(prev => ({...prev, fechaEmision: e.target.value}))} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" readOnly={contentIsReadOnly} />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium">F. Esperada</label>
+                        <input type="date" value={orden.fechaEsperada} onChange={e => setOrden(prev => ({...prev, fechaEsperada: e.target.value}))} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" readOnly={contentIsReadOnly} />
+                    </div>
+                </div>
+                 {isEditMode && (
+                    <div className="md:col-start-1">
+                        <label className="text-sm font-medium">Estado</label>
+                         <select
+                            value={orden.estado}
+                            onChange={e => setOrden(prev => ({ ...prev, estado: e.target.value as OrdenCompra['estado'] }))}
+                            disabled={orden.estado === 'Recibida'}
+                            className="w-full bg-[var(--bg-main)] p-2 border rounded-md"
+                        >
+                            <option value="Borrador">Borrador</option>
+                            <option value="En Proceso">En Proceso</option>
+                            <option value="Enviada">Enviada</option>
+                            <option value="Recibida">Recibida</option>
+                        </select>
                     </div>
                 )}
-
-
-                {/* Items Table */}
-                <div className="flex-grow overflow-y-auto border-y border-[var(--border-color)] py-2">
-                     <table className="w-full text-sm">
-                        <thead className="font-bold text-left"><tr><th className="pb-2">Cód.</th><th className="pb-2">Descripción</th><th className="pb-2">Cant.</th><th className="pb-2 text-right">Vlr. Unit.</th><th className="pb-2 text-right">Vlr. Total</th><th></th></tr></thead>
-                        <tbody>
-                            {orden.items.map(item => (
-                                <tr key={item.id} className="border-t border-[var(--border-color)]">
-                                    <td className="py-2">{item.insumoId}</td><td>{item.insumoNombre}</td><td>{item.cantidad}</td><td className="text-right">{formatCurrency(item.valorUnitario)}</td><td className="text-right">{formatCurrency(item.valorTotal)}</td>
-                                    <td>
-                                        {!contentIsReadOnly && (
-                                            <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 ml-2"><TrashIcon className="w-4 h-4" /></button>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                
-                {/* Footer */}
-                <div className="grid grid-cols-3 gap-4 pt-4 flex-shrink-0">
-                    <div className="col-span-2">
-                         <label className="text-sm font-medium">Observaciones</label>
-                        <textarea value={orden.observaciones} onChange={e => setOrden(prev => ({...prev, observaciones: e.target.value}))} rows={2} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" readOnly={contentIsReadOnly}></textarea>
-                    </div>
-                    <div className="text-right space-y-2">
-                        <p className="font-bold text-lg">Total: <span className="text-[var(--secondary-green)]">{formatCurrency(total)}</span></p>
-                         <div className="flex justify-end gap-2">
-                            <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg hover:opacity-80">Cancelar</button>
-                            {!isEditMode && (
-                                <>
-                                <button onClick={() => handleSave('Borrador')} className="px-4 py-2 text-sm font-medium text-white bg-gray-500 rounded-lg hover:opacity-90 flex items-center gap-1"><SaveIcon className="w-4 h-4"/> Guardar Borrador</button>
-                                <button onClick={() => handleSave('Enviada')} className="px-4 py-2 text-sm font-medium text-white bg-[var(--secondary-green)] rounded-lg hover:opacity-90">Guardar y Enviar</button>
-                                </>
-                            )}
-                             {isEditMode && !contentIsReadOnly && (
-                                <button onClick={() => handleSave()} className="px-4 py-2 text-sm font-medium text-white bg-[var(--secondary-green)] rounded-lg hover:opacity-90">Guardar Cambios</button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
             </div>
+
+            {/* Add Item Form */}
+            {!contentIsReadOnly && (
+                <div className="grid grid-cols-12 gap-2 items-end mb-4 flex-shrink-0">
+                    <div className="col-span-6">
+                        <label className="text-xs font-medium">Insumo</label>
+                        <select value={currentItem.insumoId} onChange={handleInsumoSelect} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm">
+                            <option value="">Seleccione un insumo...</option>
+                            {allInsumos.map(insumo => (
+                                <option key={insumo.id} value={insumo.id}>{insumo.nombre} ({insumo.id})</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="col-span-2">
+                        <label className="text-xs font-medium">Cantidad</label>
+                        <input type="number" value={currentItem.cantidad} onChange={e => setCurrentItem(prev => ({...prev, cantidad: parseInt(e.target.value) || 0}))} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
+                    </div>
+                    <div className="col-span-3">
+                        <label className="text-xs font-medium">Vlr. Unitario</label>
+                        <input type="number" value={currentItem.valorUnitario} onChange={e => setCurrentItem(prev => ({...prev, valorUnitario: parseFloat(e.target.value) || 0}))} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
+                    </div>
+                    <button onClick={handleAddItem} className="col-span-1 p-2 bg-[var(--bg-main)] rounded-md hover:opacity-80"><PlusIcon /></button>
+                </div>
+            )}
+
+
+            {/* Items Table */}
+            <div className="flex-grow overflow-y-auto border-y border-[var(--border-color)] py-2">
+                 <table className="w-full text-sm">
+                    <thead className="font-bold text-left"><tr><th className="pb-2">Cód.</th><th className="pb-2">Descripción</th><th className="pb-2">Cant.</th><th className="pb-2 text-right">Vlr. Unit.</th><th className="pb-2 text-right">Vlr. Total</th><th></th></tr></thead>
+                    <tbody>
+                        {orden.items.map(item => (
+                            <tr key={item.id} className="border-t border-[var(--border-color)]">
+                                <td className="py-2">{item.insumoId}</td><td>{item.insumoNombre}</td><td>{item.cantidad}</td><td className="text-right">{formatCurrency(item.valorUnitario)}</td><td className="text-right">{formatCurrency(item.valorTotal)}</td>
+                                <td>
+                                    {!contentIsReadOnly && (
+                                        <button onClick={() => handleRemoveItem(item.id)} className="text-red-500 hover:text-red-700 ml-2"><TrashIcon className="w-4 h-4" /></button>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            
+            {/* Footer */}
+            <div className="grid grid-cols-3 gap-4 pt-4 flex-shrink-0">
+                <div className="col-span-2">
+                     <label className="text-sm font-medium">Observaciones</label>
+                    <textarea value={orden.observaciones} onChange={e => setOrden(prev => ({...prev, observaciones: e.target.value}))} rows={2} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" readOnly={contentIsReadOnly}></textarea>
+                </div>
+                <div className="text-right space-y-2">
+                    <p className="font-bold text-lg">Total: <span className="text-[var(--secondary-green)]">{formatCurrency(total)}</span></p>
+                     <div className="flex justify-end gap-2">
+                        <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg hover:opacity-80">Cancelar</button>
+                        {!isEditMode && (
+                            <>
+                            <button onClick={() => handleSave('Borrador')} className="px-4 py-2 text-sm font-medium text-white bg-gray-500 rounded-lg hover:opacity-90 flex items-center gap-1"><SaveIcon className="w-4 h-4"/> Guardar Borrador</button>
+                            <button onClick={() => handleSave('Enviada')} className="px-4 py-2 text-sm font-medium text-white bg-[var(--secondary-green)] rounded-lg hover:opacity-90">Guardar y Enviar</button>
+                            </>
+                        )}
+                         {isEditMode && !contentIsReadOnly && (
+                            <button onClick={() => handleSave()} className="px-4 py-2 text-sm font-medium text-white bg-[var(--secondary-green)] rounded-lg hover:opacity-90">Guardar Cambios</button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 };
@@ -285,32 +291,37 @@ const OrdenCompraModal: React.FC<OrdenCompraModalProps> = ({ onClose, onSave, or
 // --- MAIN COMPONENT ---
 interface ComprasProps {
     permissions?: Record<string, boolean>;
+    allInsumos: OrionInsumo[];
+    proveedores: Tercero[];
 }
 
-const Compras: React.FC<ComprasProps> = ({ permissions }) => {
+const Compras: React.FC<ComprasProps> = ({ permissions, allInsumos, proveedores }) => {
     const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingOrden, setEditingOrden] = useState<OrdenCompra | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
-        try {
-            const stored = localStorage.getItem(COMPRAS_STORAGE_KEY);
-            if (stored) {
-                setOrdenes(JSON.parse(stored));
-            } else {
-                const initialOrdenes: OrdenCompra[] = [
-                    { id: 'OC-0052', proveedorId: 1, proveedorNombre: 'Insumos del Campo SAS', fechaEmision: '2024-07-20', fechaEsperada: '2024-07-28', items: [], total: 1200000, estado: 'Recibida', creadoPor: 'Juan Logistica', observaciones: '' },
-                    { id: 'OC-0053', proveedorId: 2, proveedorNombre: 'Empaques S.A.', fechaEmision: '2024-07-22', fechaEsperada: '2024-07-30', items: [], total: 850000, estado: 'Enviada', creadoPor: 'Juan Logistica', observaciones: '' },
-                    { id: 'OC-0054', proveedorId: 1, proveedorNombre: 'Insumos del Campo SAS', fechaEmision: '2024-07-25', fechaEsperada: '2024-08-05', items: [], total: 250000, estado: 'Borrador', creadoPor: 'Martha Milena', observaciones: '' },
-                    { id: 'OC-0055', proveedorId: 3, proveedorNombre: 'Transportes Rápidos LTDA', fechaEmision: '2024-07-26', fechaEsperada: '2024-08-01', items: [], total: 450000, estado: 'En Proceso', creadoPor: 'Martha Milena', observaciones: '' },
-                ];
-                setOrdenes(initialOrdenes);
-                localStorage.setItem(COMPRAS_STORAGE_KEY, JSON.stringify(initialOrdenes));
+        const loadData = () => {
+            try {
+                const stored = localStorage.getItem(COMPRAS_STORAGE_KEY);
+                if (stored) {
+                    setOrdenes(JSON.parse(stored));
+                } else {
+                    const initialOrdenes: OrdenCompra[] = [
+                        { id: 'OC-0052', proveedorId: '900.123.456-7', proveedorNombre: 'Insumos del Campo SAS', fechaEmision: '2024-07-20', fechaEsperada: '2024-07-28', items: [], total: 1200000, estado: 'Recibida', creadoPor: 'Juan Logistica', observaciones: '' },
+                        { id: 'OC-0053', proveedorId: '800.789.123-4', proveedorNombre: 'Empaques S.A.', fechaEmision: '2024-07-22', fechaEsperada: '2024-07-30', items: [], total: 850000, estado: 'Enviada', creadoPor: 'Juan Logistica', observaciones: '' },
+                        { id: 'OC-0054', proveedorId: '900.123.456-7', proveedorNombre: 'Insumos del Campo SAS', fechaEmision: '2024-07-25', fechaEsperada: '2024-08-05', items: [], total: 250000, estado: 'Borrador', creadoPor: 'Martha Milena', observaciones: '' },
+                        { id: 'OC-0055', proveedorId: '901.234.567-8', proveedorNombre: 'Transportes Rápidos LTDA', fechaEmision: '2024-07-26', fechaEsperada: '2024-08-01', items: [], total: 450000, estado: 'En Proceso', creadoPor: 'Martha Milena', observaciones: '' },
+                    ];
+                    setOrdenes(initialOrdenes);
+                    localStorage.setItem(COMPRAS_STORAGE_KEY, JSON.stringify(initialOrdenes));
+                }
+            } catch (error) {
+                console.error("Failed to load purchase orders", error);
             }
-        } catch (error) {
-            console.error("Failed to load purchase orders", error);
-        }
+        };
+        loadData();
+        window.addEventListener('storage', loadData);
+        return () => window.removeEventListener('storage', loadData);
     }, []);
 
     const filteredOrdenes = useMemo(() => {
@@ -327,21 +338,13 @@ const Compras: React.FC<ComprasProps> = ({ permissions }) => {
             .sort((a, b) => new Date(b.fechaEmision).getTime() - new Date(a.fechaEmision).getTime());
     }, [ordenes, searchTerm]);
 
-    const handleSave = (ordenToSave: OrdenCompra) => {
-        const isUpdating = ordenes.some(o => o.id === ordenToSave.id);
-        const updatedOrdenes = isUpdating
-            ? ordenes.map(o => o.id === ordenToSave.id ? ordenToSave : o)
-            : [...ordenes, ordenToSave];
-        
-        setOrdenes(updatedOrdenes);
-        localStorage.setItem(COMPRAS_STORAGE_KEY, JSON.stringify(updatedOrdenes));
-        setIsModalOpen(false);
-        setEditingOrden(null);
-    };
-
     const handleOpenModal = (orden: OrdenCompra | null) => {
-        setEditingOrden(orden);
-        setIsModalOpen(true);
+        window.dispatchEvent(new CustomEvent('createOrionWindow', {
+            detail: {
+                title: orden ? 'Editar Orden de Compra' : 'Nueva Orden de Compra',
+                props: { ordenToEdit: orden }
+            }
+        }));
     };
     
     const handleDelete = (ordenId: string) => {
@@ -440,7 +443,6 @@ const Compras: React.FC<ComprasProps> = ({ permissions }) => {
                 </table>
             </div>
 
-            {isModalOpen && <OrdenCompraModal onClose={() => { setIsModalOpen(false); setEditingOrden(null); }} onSave={handleSave} ordenToEdit={editingOrden} />}
         </div>
     );
 };

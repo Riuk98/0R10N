@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Switch from './Switch'; // Import the new Switch component
 
@@ -16,7 +18,7 @@ interface WindowState {
 }
 
 // Import all the new module components
-import ClientesCRM from '../modules/comercial/ClientesCRM';
+import ClientesCRM, { Tercero } from '../modules/comercial/ClientesCRM';
 import PedidosVenta from '../modules/comercial/PedidosVenta';
 import SoportePQR from '../modules/comercial/SoportePQR';
 import CrearPedido from '../modules/comercial/CrearPedido';
@@ -26,12 +28,12 @@ import Facturacion from '../modules/comercial/Facturacion';
 
 import CuentasCobrar from '../modules/financiero/CuentasCobrar';
 import CuentasPagar from '../modules/financiero/CuentasPagar';
-import Contabilidad from '../modules/financiero/Contabilidad';
+import Contabilidad, { NuevoAsientoContableForm } from '../modules/financiero/Contabilidad';
 import Nomina from '../modules/financiero/Nomina';
 
-import Inventario from '../modules/operaciones/Inventario';
-import Compras from '../modules/operaciones/Compras';
-import Produccion from '../modules/operaciones/Produccion';
+import Inventario, { OrionProduct, OrionInsumo } from '../modules/operaciones/Inventario';
+import Compras, { OrdenCompraForm } from '../modules/operaciones/Compras';
+import Produccion, { OrdenProduccionForm } from '../modules/operaciones/Produccion';
 import AnadirProducto from '../modules/operaciones/AnadirProducto';
 
 
@@ -42,6 +44,7 @@ import RegistroUsuario from '../modules/administracion/RegistroUsuario';
 import GestionPermisos from '../modules/administracion/GestionPermisos';
 import { OrionUser, INTERNAL_USERS } from '../data/internalUsers';
 import { defaultPermissionsByRole } from '../data/permissions';
+import { initialProducts, initialInsumos } from '../data/inventoryData';
 
 
 // --- SVG ICONS (as React components for easier use) ---
@@ -90,7 +93,7 @@ const navData = [
     { title: "Comercial", icon: Icons.Commercial, items: ["Terceros (CRM)", "Pedidos de Venta", "Soporte (PQR)"] },
     { title: "Financiero", icon: Icons.Financial, items: ["Cuentas por Cobrar", "Cuentas por Pagar", "Contabilidad", "Nómina"] },
     { title: "Operaciones", icon: Icons.Operations, items: ["Inventario", "Compras", "Producción"] },
-    { title: "Administración", icon: Icons.Admin, items: ["Reportes y Analíticas", "Gestión de Usuarios", "Configuración", "Gestión de Permisos"] },
+    { title: "Administración", icon: Icons.Admin, items: ["Reportes y Analíticas", "Gestión de Usuarios", "Configuración"] },
 ];
 
 const moduleNameMapping: { [key: string]: string } = {
@@ -107,7 +110,6 @@ const moduleNameMapping: { [key: string]: string } = {
     "Reportes y analiticas": "Reportes y Analíticas",
     "Gestion de usuarios": "Gestión de Usuarios",
     "Configuracion": "Configuración",
-    "Gestion de permisos": "Gestión de Permisos"
 };
 
 const invertedModuleNameMapping: { [key: string]: string } = {};
@@ -124,7 +126,7 @@ const ModuleContent: React.FC<{
     [key: string]: any; // To allow passing arbitrary props
 }> = ({ title, onClose = () => {}, permissions, ...props }) => {
     switch (title) {
-        case 'Terceros (CRM)': return <ClientesCRM permissions={permissions} />;
+        case 'Terceros (CRM)': return <ClientesCRM permissions={permissions} terceros={props.terceros} onSave={props.onSaveTercero} />;
         case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
         case 'Soporte (PQR)': return <SoportePQR />;
         case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} />;
@@ -136,20 +138,26 @@ const ModuleContent: React.FC<{
         case 'Cuentas por Pagar': return <CuentasPagar />;
         case 'Contabilidad': return <Contabilidad />;
         case 'Nómina': return <Nomina />;
+        case 'Nuevo Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
+        case 'Editar Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
         
-        case 'Inventario': return <Inventario permissions={permissions} />;
-        case 'Anadir Producto': return <AnadirProducto onClose={onClose} />;
-        case 'Compras': return <Compras />;
-        case 'Producción': return <Produccion />;
+        case 'Inventario': return <Inventario permissions={permissions} products={props.orionProducts} insumos={props.orionInsumos} />;
+        case 'Anadir Producto': return <AnadirProducto onClose={onClose} onAddProduct={props.onAddProduct} />;
+        case 'Compras': return <Compras permissions={permissions} allInsumos={props.orionInsumos} proveedores={props.proveedores} />;
+        // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
+        case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
+        case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
+        case 'Producción': return <Produccion permissions={permissions} allProducts={props.orionProducts} allInsumos={props.orionInsumos} />;
+        // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
+        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={null} />;
+        case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={props.ordenToEdit} />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
         case 'Gestión de Usuarios': return <GestionUsuarios users={props.users} onDeleteSuccess={props.onDeleteSuccess} permissions={permissions} />;
         case 'Configuración': return <Configuracion />;
         case 'Registro de Usuario': return <RegistroUsuario onRegisterSuccess={props.onRegisterSuccess} onClose={onClose} permissions={permissions} users={props.users} {...props} />;
         case 'Editar Usuario': return <RegistroUsuario onUpdateSuccess={props.onUpdateSuccess} onClose={onClose} permissions={permissions} users={props.users} {...props} />;
-        case 'Gestión de Permisos': return <GestionPermisos onClose={onClose} />;
-
-        
+                
         default: return <p>Contenido para {title} no encontrado.</p>;
     }
 };
@@ -169,6 +177,12 @@ const Window: React.FC<{
     onUpdateSuccess: (updatedUser: OrionUser) => void;
     onDeleteSuccess: (userId: number) => void;
     permissions?: Record<string, boolean>;
+    orionProducts: OrionProduct[];
+    orionInsumos: OrionInsumo[];
+    onAddProduct: (newProduct: OrionProduct) => void;
+    terceros: Tercero[];
+    onSaveTercero: (tercero: Tercero) => void;
+    proveedores: Tercero[];
 }> = ({ win, onClose, onMinimize, onFocus, onUpdate, isFocused, onAnimationEnd, permissions, ...rest }) => {
     
     const headerRef = useRef<HTMLDivElement>(null);
@@ -246,7 +260,7 @@ const Window: React.FC<{
                     <button onClick={() => onClose(win.id)} title="Cerrar"><Icons.Close className="w-4 h-4" /></button>
                 </div>
             </div>
-            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') || win.title.includes('Ticket') || win.title.includes('Facturación') || win.title.includes('Producto') ? 'no-padding' : ''}`}>
+            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') || win.title.includes('Ticket') || win.title.includes('Facturación') || win.title.includes('Producto') || win.title.includes('Orden') || win.title.includes('Asiento') ? 'no-padding' : ''}`}>
                  <ModuleContent title={win.title} onClose={() => onClose(win.id)} permissions={permissions} {...rest} {...win.props} />
             </div>
         </div>
@@ -274,8 +288,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const nextZIndex = useRef(100);
     const maxZIndex = windows.reduce((max, w) => Math.max(max, w.zIndex), 0);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    
+    // Centralized Data States
     const [internalUsers, setInternalUsers] = useState<OrionUser[]>([]);
+    const [orionProducts, setOrionProducts] = useState<OrionProduct[]>([]);
+    const [orionInsumos, setOrionInsumos] = useState<OrionInsumo[]>([]);
+    const [terceros, setTerceros] = useState<Tercero[]>([]);
+
+    
     const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
+    const ORION_PRODUCTS_STORAGE_KEY = 'orionProducts';
+    const ORION_INSUMOS_STORAGE_KEY = 'orionInsumos';
+    const TERCEROS_STORAGE_KEY = 'orionTerceros';
+
 
     const [currentUser, setCurrentUser] = useState<OrionUser | null>(null);
 
@@ -322,8 +347,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     }, []);
 
 
-    // Effect to load/initialize users
+    // Effect to load/initialize all central data
     useEffect(() => {
+        // Load Users
         try {
             const storedUsers = localStorage.getItem(ORION_USERS_STORAGE_KEY);
             if (storedUsers) {
@@ -332,12 +358,84 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 setInternalUsers(INTERNAL_USERS);
                 localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(INTERNAL_USERS));
             }
+        } catch (error) { console.error("Failed to manage Orion users", error); setInternalUsers(INTERNAL_USERS); }
+
+        // Load Products
+        try {
+            const storedProducts = localStorage.getItem(ORION_PRODUCTS_STORAGE_KEY);
+            if (storedProducts) {
+                setOrionProducts(JSON.parse(storedProducts));
+            } else {
+                setOrionProducts(initialProducts);
+                localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(initialProducts));
+            }
+        } catch (error) { console.error("Failed to manage Orion products", error); setOrionProducts(initialProducts); }
+        
+        // Load Insumos
+        try {
+            const storedInsumos = localStorage.getItem(ORION_INSUMOS_STORAGE_KEY);
+            if (storedInsumos) {
+                setOrionInsumos(JSON.parse(storedInsumos));
+            } else {
+                setOrionInsumos(initialInsumos);
+                localStorage.setItem(ORION_INSUMOS_STORAGE_KEY, JSON.stringify(initialInsumos));
+            }
+        } catch (error) { console.error("Failed to manage Orion insumos", error); setOrionInsumos(initialInsumos); }
+
+        // Load or Migrate Terceros (Clients & Suppliers)
+        try {
+            const storedTercerosRaw = localStorage.getItem(TERCEROS_STORAGE_KEY);
+            if (storedTercerosRaw) {
+                setTerceros(JSON.parse(storedTercerosRaw));
+            } else {
+                // Migration needed
+                const clientesRaw = localStorage.getItem('hatoGrandeClientes');
+                const proveedoresRaw = localStorage.getItem('orionProveedores');
+                const clientes = clientesRaw ? JSON.parse(clientesRaw) : [];
+                const proveedores = proveedoresRaw ? JSON.parse(proveedoresRaw) : [];
+                const tercerosMap = new Map<string, Tercero>();
+
+                clientes.forEach((c: any) => {
+                    const id = (c.nit || c.email || `${c.firstName}${c.lastName}`).toString();
+                    tercerosMap.set(id, {
+                        id,
+                        nombre: `${c.firstName} ${c.lastName}`,
+                        nit: c.nit || '',
+                        direccion: c.direccion || '',
+                        telefono: c.phone || '',
+                        email: c.email,
+                        tipoPago: c.tipoPago || 'Contado',
+                        tipo: 'Cliente',
+                    });
+                });
+
+                proveedores.forEach((p: any) => {
+                    const id = (p.nit || p.email || p.nombre).toString();
+                    if (tercerosMap.has(id)) {
+                        const existing = tercerosMap.get(id)!;
+                        existing.tipo = 'Ambos';
+                        existing.nombre = existing.nombre || p.nombre;
+                        existing.direccion = existing.direccion || p.direccion;
+                    } else {
+                        tercerosMap.set(id, {
+                            id: p.id.toString(),
+                            nombre: p.nombre, nit: p.nit, direccion: p.direccion, telefono: p.telefono,
+                            email: p.email, tipoPago: p.tipoPago, tipo: 'Proveedor',
+                        });
+                    }
+                });
+
+                const newTerceros = Array.from(tercerosMap.values());
+                setTerceros(newTerceros);
+                localStorage.setItem(TERCEROS_STORAGE_KEY, JSON.stringify(newTerceros));
+            }
         } catch (error) {
-            console.error("Failed to manage Orion users in localStorage", error);
-            setInternalUsers(INTERNAL_USERS);
+            console.error("Error managing terceros data", error);
         }
+
     }, []);
 
+    // --- Data Handler Functions ---
     const handleRegisterUser = (newUser: OrionUser) => {
         const updatedUsers = [...internalUsers, newUser];
         setInternalUsers(updatedUsers);
@@ -360,6 +458,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
         }
     };
+
+    const handleAddProduct = (newProduct: OrionProduct) => {
+        const updatedProducts = [...orionProducts, newProduct];
+        setOrionProducts(updatedProducts);
+        localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(updatedProducts));
+    };
+
+    const handleSaveTercero = (terceroToSave: Tercero) => {
+        const isUpdating = terceros.some(t => t.id === terceroToSave.id);
+        const updatedTerceros = isUpdating
+            ? terceros.map(t => (t.id === terceroToSave.id ? terceroToSave : t))
+            : [...terceros, terceroToSave];
+        setTerceros(updatedTerceros);
+        localStorage.setItem(TERCEROS_STORAGE_KEY, JSON.stringify(updatedTerceros));
+    };
+
 
     // Theme effect
     useEffect(() => {
@@ -576,6 +690,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         })
     })).filter(pillar => pillar.items.length > 0);
     
+    const proveedores = terceros.filter(t => t.tipo === 'Proveedor' || t.tipo === 'Ambos');
+
     return (
         <div className={`erp-container`}>
            <style>{`
@@ -894,7 +1010,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                                 onRegisterSuccess={handleRegisterUser} 
                                 onUpdateSuccess={handleUpdateUser} 
                                 onDeleteSuccess={handleDeleteUser}
-                                permissions={permissions} 
+                                permissions={permissions}
+                                orionProducts={orionProducts}
+                                orionInsumos={orionInsumos}
+                                onAddProduct={handleAddProduct} 
+                                terceros={terceros}
+                                onSaveTercero={handleSaveTercero}
+                                proveedores={proveedores}
                             />
                         );
                     })}

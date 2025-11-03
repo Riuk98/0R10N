@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 
 // --- TYPE DEFINITION ---
@@ -16,7 +15,14 @@ export interface OrionProduct {
     stockMax: number;
 }
 
-const ORION_PRODUCTS_STORAGE_KEY = 'orionProducts';
+export interface OrionInsumo {
+    id: string;
+    nombre: string;
+    cantidad: number;
+    unidadMedida: string;
+    costoUnitario: number;
+}
+
 
 // --- ICONS ---
 const SpinnerIcon = () => (
@@ -55,40 +61,21 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 interface InventarioProps {
     permissions?: Record<string, boolean>;
+    products: OrionProduct[];
+    insumos: OrionInsumo[];
 }
 
-const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
+const Inventario: React.FC<InventarioProps> = ({ permissions, products, insumos }) => {
     const [activeTab, setActiveTab] = useState<'productos' | 'insumos'>('productos');
     const [isSearching, setIsSearching] = useState(false);
-    const [products, setProducts] = useState<OrionProduct[]>([]);
-
-    const loadProducts = useCallback(() => {
-        try {
-            const storedProducts = localStorage.getItem(ORION_PRODUCTS_STORAGE_KEY);
-            setProducts(storedProducts ? JSON.parse(storedProducts) : []);
-        } catch (error) {
-            console.error("Failed to load products from localStorage", error);
-            setProducts([]);
-        }
-    }, []);
-
-    useEffect(() => {
-        loadProducts();
-        window.addEventListener('storage', loadProducts);
-        return () => {
-            window.removeEventListener('storage', loadProducts);
-        };
-    }, [loadProducts]);
-
-
+    
     const headersProductos = [
         "Codigo", "Nombre", "Cantidad", "Valor u.", "Categoria", 
         "F. Lote", "F. Vencimiento"
     ];
 
     const headersInsumos = [
-        "Codigo", "Nombre", "Cantidad", "Categoria", "F. Compra", 
-        "F. Vencimiento", "Factura"
+        "Codigo", "Nombre", "Cantidad", "Unidad", "Costo Unitario"
     ];
 
     const headers = activeTab === 'productos' ? headersProductos : headersInsumos;
@@ -194,13 +181,13 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
                         onClick={() => setActiveTab('productos')}
                         className={`inventario-tab ${activeTab === 'productos' ? 'active' : ''}`}
                     >
-                        Productos
+                        Productos Terminados
                     </button>
                     <button 
                         onClick={() => setActiveTab('insumos')}
                         className={`inventario-tab ${activeTab === 'insumos' ? 'active' : ''}`}
                     >
-                        Insumos
+                        Insumos / Materia Prima
                     </button>
                 </div>
                 
@@ -208,7 +195,7 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
                 <div className="flex items-center w-full md:w-auto">
                     <input 
                         type="text" 
-                        placeholder="Nombre de cliente, c. pedido, telefono o correo"
+                        placeholder="Buscar por código o nombre..."
                         className="bg-[var(--bg-main)] border border-[var(--border-color)] rounded-l p-1.5 text-sm w-full md:w-80 focus:ring-2 focus:ring-[var(--secondary-green)] outline-none text-[var(--text-primary)]"
                     />
                     <button 
@@ -244,10 +231,26 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
                                         <td>{product.fechaVencimiento}</td>
                                     </tr>
                                 ))}
-                                {products.length === 0 && activeTab === 'productos' && (
+                                {activeTab === 'insumos' && insumos.map(insumo => (
+                                    <tr key={insumo.id}>
+                                        <td>{insumo.id}</td>
+                                        <td>{insumo.nombre}</td>
+                                        <td>{insumo.cantidad}</td>
+                                        <td>{insumo.unidadMedida}</td>
+                                        <td>{formatCurrency(insumo.costoUnitario)}</td>
+                                    </tr>
+                                ))}
+                                {(products.length === 0 && activeTab === 'productos') && (
                                      <tr>
                                         <td colSpan={headers.length} className="text-center p-8 text-[var(--text-secondary)]">
                                             No hay productos en el inventario. Añade uno para empezar.
+                                        </td>
+                                    </tr>
+                                )}
+                                 {(insumos.length === 0 && activeTab === 'insumos') && (
+                                     <tr>
+                                        <td colSpan={headers.length} className="text-center p-8 text-[var(--text-secondary)]">
+                                            No hay insumos registrados en el inventario.
                                         </td>
                                     </tr>
                                 )}

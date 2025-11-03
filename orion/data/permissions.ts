@@ -3,7 +3,7 @@
 export const modulos = [
     "Terceros", "Pedidos de venta", "Soporte", "Cuentas por cobrar", "Cuentas por pagar",
     "Contabilidad", "Nomina", "Inventario", "Compras", "Produccion",
-    "Reportes y analiticas", "Gestion de usuarios", "Configuracion"
+    "Reportes y analiticas", "Gestion de usuarios", "Configuracion", "Gestion de permisos"
 ];
 
 export const roles = [
@@ -74,6 +74,7 @@ export const defaultPermissionsByRole: Record<string, Record<string, Record<stri
         "Reportes y analiticas": fullAccess,
         "Terceros": { ver: true, crear: false, actualizar: true, eliminar: false },
         "Gestion de usuarios": { ver: true, crear: true, actualizar: true, eliminar: true },
+        "Gestion de permisos": fullAccess,
         "Pedidos de venta": { ver: true, crear: false, actualizar: true, eliminar: false },
         "Compras": { ver: true, crear: false, actualizar: true, eliminar: false },
         "Produccion": { ver: true, crear: false, actualizar: true, eliminar: false },

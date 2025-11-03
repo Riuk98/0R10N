@@ -33,33 +33,36 @@ const isSameMonthAndYear = (date1: Date, date2: Date): boolean => {
 
 const Contabilidad: React.FC = () => {
     const [asientos, setAsientos] = useState<AsientoContable[]>([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingAsiento, setEditingAsiento] = useState<AsientoContable | null>(null);
     const [expandedRows, setExpandedRows] = useState<string[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     
     useEffect(() => {
-        try {
-            const storedAsientos = localStorage.getItem(ASIENTOS_STORAGE_KEY);
-            if (storedAsientos) {
-                setAsientos(JSON.parse(storedAsientos));
-            } else {
-                setAsientos(initialAsientos);
-                localStorage.setItem(ASIENTOS_STORAGE_KEY, JSON.stringify(initialAsientos));
-            }
+        const loadAsientos = () => {
+            try {
+                const storedAsientos = localStorage.getItem(ASIENTOS_STORAGE_KEY);
+                if (storedAsientos) {
+                    setAsientos(JSON.parse(storedAsientos));
+                } else {
+                    setAsientos(initialAsientos);
+                    localStorage.setItem(ASIENTOS_STORAGE_KEY, JSON.stringify(initialAsientos));
+                }
 
-            const storedConsecutivos = localStorage.getItem(CONSECUTIVOS_STORAGE_KEY);
-            if (!storedConsecutivos) {
-                 localStorage.setItem(CONSECUTIVOS_STORAGE_KEY, JSON.stringify({
-                    'Egresos': initialAsientos.filter(a => a.tipo === 'Egresos').length,
-                    'Recibos de Caja': initialAsientos.filter(a => a.tipo === 'Recibos de Caja').length,
-                    'Comprobante Contable': initialAsientos.filter(a => a.tipo === 'Comprobante Contable').length
-                }));
+                const storedConsecutivos = localStorage.getItem(CONSECUTIVOS_STORAGE_KEY);
+                if (!storedConsecutivos) {
+                     localStorage.setItem(CONSECUTIVOS_STORAGE_KEY, JSON.stringify({
+                        'Egresos': initialAsientos.filter(a => a.tipo === 'Egresos').length,
+                        'Recibos de Caja': initialAsientos.filter(a => a.tipo === 'Recibos de Caja').length,
+                        'Comprobante Contable': initialAsientos.filter(a => a.tipo === 'Comprobante Contable').length
+                    }));
+                }
+            } catch (error) {
+                console.error("Failed to load accounting entries", error);
+                setAsientos(initialAsientos);
             }
-        } catch (error) {
-            console.error("Failed to load accounting entries", error);
-            setAsientos(initialAsientos);
-        }
+        };
+        loadAsientos();
+        window.addEventListener('storage', loadAsientos);
+        return () => window.removeEventListener('storage', loadAsientos);
     }, []);
 
     const filteredAsientos = useMemo(() => {
@@ -78,34 +81,14 @@ const Contabilidad: React.FC = () => {
             })
             .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
     }, [asientos, searchTerm]);
-    
-    const handleSaveAsiento = (asientoToSave: AsientoContable) => {
-        const isUpdating = asientos.some(a => a.id === asientoToSave.id);
-        let updatedAsientos;
-
-        if (isUpdating) {
-            updatedAsientos = asientos.map(a => a.id === asientoToSave.id ? asientoToSave : a);
-        } else {
-            updatedAsientos = [...asientos, asientoToSave];
-            try {
-                const storedConsecutivos = JSON.parse(localStorage.getItem(CONSECUTIVOS_STORAGE_KEY) || '{}');
-                storedConsecutivos[asientoToSave.tipo] = asientoToSave.consecutivo;
-                localStorage.setItem(CONSECUTIVOS_STORAGE_KEY, JSON.stringify(storedConsecutivos));
-            } catch (error) {
-                console.error("Failed to update consecutive counter", error);
-            }
-        }
-        
-        setAsientos(updatedAsientos);
-        localStorage.setItem(ASIENTOS_STORAGE_KEY, JSON.stringify(updatedAsientos));
-        
-        setIsModalOpen(false);
-        setEditingAsiento(null);
-    };
 
     const handleOpenEditModal = (asiento: AsientoContable) => {
-        setEditingAsiento(asiento);
-        setIsModalOpen(true);
+        window.dispatchEvent(new CustomEvent('createOrionWindow', {
+            detail: { 
+                title: 'Editar Asiento Contable',
+                props: { asientoToEdit: asiento }
+            }
+        }));
     };
     
     const handleExportPDF = (asiento: AsientoContable) => {
@@ -130,7 +113,11 @@ const Contabilidad: React.FC = () => {
                     <p className="text-sm text-[var(--text-secondary)]">Registro y consulta de asientos contables.</p>
                 </div>
                 <button
-                    onClick={() => { setEditingAsiento(null); setIsModalOpen(true); }}
+                    onClick={() => {
+                        window.dispatchEvent(new CustomEvent('createOrionWindow', {
+                            detail: { title: 'Nuevo Asiento Contable' }
+                        }));
+                    }}
                     className="mt-2 sm:mt-0 inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[var(--secondary-green)] hover:opacity-90">
                     <PlusIcon className="mr-2" /> Nuevo Asiento
                 </button>
@@ -229,19 +216,16 @@ const Contabilidad: React.FC = () => {
                     </tbody>
                 </table>
             </div>
-            
-            {isModalOpen && <NuevoAsientoModal onClose={() => { setIsModalOpen(false); setEditingAsiento(null); }} onSave={handleSaveAsiento} asientoToEdit={editingAsiento} />}
         </div>
     );
 };
 
-// --- Modal Component for New/Edit Entry ---
-interface NuevoAsientoModalProps {
+// --- Form Component for New/Edit Entry ---
+interface NuevoAsientoContableFormProps {
     onClose: () => void;
-    onSave: (asiento: AsientoContable) => void;
-    asientoToEdit: AsientoContable | null;
+    asientoToEdit?: AsientoContable;
 }
-const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave, asientoToEdit }) => {
+export const NuevoAsientoContableForm: React.FC<NuevoAsientoContableFormProps> = ({ onClose, asientoToEdit }) => {
     const isEditMode = !!asientoToEdit;
     const [tipo, setTipo] = useState<TipoAsiento | ''>('');
     const [consecutivo, setConsecutivo] = useState<number>(0);
@@ -327,78 +311,97 @@ const NuevoAsientoModal: React.FC<NuevoAsientoModalProps> = ({ onClose, onSave, 
             partidas: partidas.map((p, i) => ({ ...p, id: Date.now() + i })),
             creadoPor: userName,
         };
-        onSave(asientoData);
+        
+        try {
+            const storedAsientos = JSON.parse(localStorage.getItem(ASIENTOS_STORAGE_KEY) || '[]');
+            const isUpdating = storedAsientos.some((a: AsientoContable) => a.id === asientoData.id);
+            let updatedAsientos;
+
+            if (isUpdating) {
+                updatedAsientos = storedAsientos.map((a: AsientoContable) => a.id === asientoData.id ? asientoData : a);
+            } else {
+                updatedAsientos = [...storedAsientos, asientoData];
+                const storedConsecutivos = JSON.parse(localStorage.getItem(CONSECUTIVOS_STORAGE_KEY) || '{}');
+                storedConsecutivos[asientoData.tipo] = asientoData.consecutivo;
+                localStorage.setItem(CONSECUTIVOS_STORAGE_KEY, JSON.stringify(storedConsecutivos));
+            }
+            localStorage.setItem(ASIENTOS_STORAGE_KEY, JSON.stringify(updatedAsientos));
+            window.dispatchEvent(new Event('storage')); // Notify other components
+        } catch (error) {
+            console.error("Failed to save asiento", error);
+        }
+
+        onClose();
     };
 
     const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-[var(--bg-card)] rounded-lg shadow-xl p-6 w-full max-w-4xl h-[90vh] flex flex-col">
-                <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex-shrink-0">{isEditMode ? 'Editar Asiento Contable' : 'Crear Nuevo Asiento Contable'}</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 flex-shrink-0">
-                    <div>
-                        <label className="text-sm font-medium">Tipo de Asiento</label>
-                        <select value={tipo} onChange={e => setTipo(e.target.value as TipoAsiento)} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" disabled={isEditMode}>
-                            <option value="">Seleccione...</option>
-                            <option value="Egresos">Egresos</option>
-                            <option value="Recibos de Caja">Recibos de Caja</option>
-                            <option value="Comprobante Contable">Comprobante Contable</option>
-                        </select>
-                    </div>
-                     <div>
-                        <label className="text-sm font-medium">Consecutivo</label>
-                        <input type="text" value={formatConsecutivo(tipo, consecutivo)} readOnly className="w-full bg-[var(--border-color)] p-2 border rounded-md cursor-not-allowed" />
-                    </div>
-                    <div>
-                        <label className="text-sm font-medium">Fecha</label>
-                        <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" />
-                    </div>
-                    <div className="md:col-span-4">
-                        <label className="text-sm font-medium">Concepto General</label>
-                        <input type="text" value={concepto} onChange={e => setConcepto(e.target.value)} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" />
-                    </div>
+        <div className="bg-[var(--bg-card)] p-6 h-full flex flex-col">
+            <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex-shrink-0">{isEditMode ? 'Editar Asiento Contable' : 'Crear Nuevo Asiento Contable'}</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 flex-shrink-0">
+                <div>
+                    <label className="text-sm font-medium">Tipo de Asiento</label>
+                    <select value={tipo} onChange={e => setTipo(e.target.value as TipoAsiento)} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" disabled={isEditMode}>
+                        <option value="">Seleccione...</option>
+                        <option value="Egresos">Egresos</option>
+                        <option value="Recibos de Caja">Recibos de Caja</option>
+                        <option value="Comprobante Contable">Comprobante Contable</option>
+                    </select>
                 </div>
+                 <div>
+                    <label className="text-sm font-medium">Consecutivo</label>
+                    <input type="text" value={formatConsecutivo(tipo, consecutivo)} readOnly className="w-full bg-[var(--border-color)] p-2 border rounded-md cursor-not-allowed" />
+                </div>
+                <div>
+                    <label className="text-sm font-medium">Fecha</label>
+                    <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" />
+                </div>
+                <div className="md:col-span-4">
+                    <label className="text-sm font-medium">Concepto General</label>
+                    <input type="text" value={concepto} onChange={e => setConcepto(e.target.value)} className="w-full bg-[var(--bg-main)] p-2 border rounded-md" />
+                </div>
+            </div>
 
-                <div className="flex-grow overflow-y-auto border-t border-b border-[var(--border-color)] py-2">
-                    {partidas.map((partida, index) => (
-                        <div key={index} className="grid grid-cols-12 gap-2 items-center mb-2">
-                            <input type="text" placeholder="Cuenta (e.g., 110505)" value={partida.cuenta} onChange={e => handlePartidaChange(index, 'cuenta', e.target.value)} className="col-span-3 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
-                            <input type="text" placeholder="Descripción" value={partida.descripcion} onChange={e => handlePartidaChange(index, 'descripcion', e.target.value)} className="col-span-4 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
-                            <input type="number" placeholder="Débito" value={partida.debito || ''} onChange={e => handlePartidaChange(index, 'debito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
-                            <input type="number" placeholder="Crédito" value={partida.credito || ''} onChange={e => handlePartidaChange(index, 'credito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
-                            <button onClick={() => removePartida(index)} className="col-span-1 text-red-500 hover:text-red-700 disabled:opacity-50" disabled={partidas.length <= 2}><TrashIcon /></button>
+            <div className="flex-grow overflow-y-auto border-t border-b border-[var(--border-color)] py-2">
+                {partidas.map((partida, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-center mb-2">
+                        <input type="text" placeholder="Cuenta (e.g., 110505)" value={partida.cuenta} onChange={e => handlePartidaChange(index, 'cuenta', e.target.value)} className="col-span-3 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
+                        <input type="text" placeholder="Descripción" value={partida.descripcion} onChange={e => handlePartidaChange(index, 'descripcion', e.target.value)} className="col-span-4 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
+                        <input type="number" placeholder="Débito" value={partida.debito || ''} onChange={e => handlePartidaChange(index, 'debito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
+                        <input type="number" placeholder="Crédito" value={partida.credito || ''} onChange={e => handlePartidaChange(index, 'credito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
+                        <button onClick={() => removePartida(index)} className="col-span-1 text-red-500 hover:text-red-700 disabled:opacity-50" disabled={partidas.length <= 2}><TrashIcon /></button>
+                    </div>
+                ))}
+                <button onClick={addPartida} className="text-sm text-[var(--secondary-green)] font-semibold hover:opacity-80">+ Añadir Partida</button>
+            </div>
+
+            <div className="flex justify-between items-center pt-4 font-bold text-lg flex-shrink-0">
+                <div className="flex items-center gap-4">
+                    <div className={`p-2 rounded ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
+                        {isBalanced ? 'Asiento Balanceado' : 'Asiento Desbalanceado'}
+                    </div>
+                    {!isBalanced && (
+                        <div className="text-red-600 text-base font-medium">
+                            Diferencia: {formatCurrency(Math.abs(totalDebito - totalCredito))}
                         </div>
-                    ))}
-                    <button onClick={addPartida} className="text-sm text-[var(--secondary-green)] font-semibold hover:opacity-80">+ Añadir Partida</button>
+                    )}
                 </div>
-
-                <div className="flex justify-between items-center pt-4 font-bold text-lg flex-shrink-0">
-                    <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
-                            {isBalanced ? 'Asiento Balanceado' : 'Asiento Desbalanceado'}
-                        </div>
-                        {!isBalanced && (
-                            <div className="text-red-600 text-base font-medium">
-                                Diferencia: {formatCurrency(Math.abs(totalDebito - totalCredito))}
-                            </div>
-                        )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-8 text-right">
-                        <span>{formatCurrency(totalDebito)}</span>
-                        <span>{formatCurrency(totalCredito)}</span>
-                    </div>
+                <div className="grid grid-cols-2 gap-x-8 text-right">
+                    <span>{formatCurrency(totalDebito)}</span>
+                    <span>{formatCurrency(totalCredito)}</span>
                 </div>
+            </div>
 
 
-                <div className="mt-6 flex justify-end gap-3 flex-shrink-0">
-                    <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg hover:opacity-80">Cancelar</button>
-                    <button onClick={handleSubmit} disabled={!isBalanced || !tipo} className="px-4 py-2 text-sm font-medium text-white bg-[var(--secondary-green)] rounded-lg hover:opacity-90 disabled:opacity-50">Guardar Asiento</button>
-                </div>
+            <div className="mt-6 flex justify-end gap-3 flex-shrink-0">
+                <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg hover:opacity-80">Cancelar</button>
+                <button onClick={handleSubmit} disabled={!isBalanced || !tipo} className="px-4 py-2 text-sm font-medium text-white bg-[var(--secondary-green)] rounded-lg hover:opacity-90 disabled:opacity-50">Guardar Asiento</button>
             </div>
         </div>
     );
 };
+
 
 export default Contabilidad;
