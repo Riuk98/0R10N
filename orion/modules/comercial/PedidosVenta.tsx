@@ -65,6 +65,15 @@ const PedidosVenta: React.FC<PedidosVentaProps> = ({ permissions }) => {
             detail: { title: 'Crear Pedido' }
         }));
     };
+
+    const handleViewPedido = (pedido: any) => {
+        window.dispatchEvent(new CustomEvent('createOrionWindow', {
+            detail: {
+                title: 'Editar Pedido',
+                props: { orderToEdit: pedido }
+            }
+        }));
+    };
     
     const formatDate = (isoString?: string) => {
         if (!isoString) return '';
@@ -133,7 +142,7 @@ const PedidosVenta: React.FC<PedidosVentaProps> = ({ permissions }) => {
                         </thead>
                         <tbody>
                              {pedidos.map(pedido => (
-                                <tr key={pedido.id}>
+                                <tr key={pedido.id} onClick={() => handleViewPedido(pedido)} className="cursor-pointer hover:bg-[var(--bg-main)]">
                                     <td>{pedido.id}</td>
                                     <td>{formatDate(pedido.creationDate)}</td>
                                     <td>{pedido.clientName}</td>

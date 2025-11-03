@@ -33,6 +33,8 @@ import Nomina from '../modules/financiero/Nomina';
 import Inventario from '../modules/operaciones/Inventario';
 import Compras from '../modules/operaciones/Compras';
 import Produccion from '../modules/operaciones/Produccion';
+import AnadirProducto from '../modules/operaciones/AnadirProducto';
+
 
 import ReportesAnaliticas from '../modules/administracion/ReportesAnaliticas';
 import GestionUsuarios from '../modules/administracion/GestionUsuarios';
@@ -67,6 +69,22 @@ const Icons = {
     ArrowLeft: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>),
     // FIX: Corrected typo in viewBox attribute from "0 0 24" 24" to "0 0 24 24".
     Trash: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>),
+    Close: (props: React.SVGProps<SVGSVGElement>) => (
+        <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+    ),
+    Minimize: (props: React.SVGProps<SVGSVGElement>) => (
+        <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+    ),
+    Maximize: (props: React.SVGProps<SVGSVGElement>) => (
+        <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="5" y="5" width="14" height="14" rx="1" ry="1"></rect>
+        </svg>
+    ),
 };
 
 // --- NAVIGATION DATA ---
@@ -112,6 +130,7 @@ const ModuleContent: React.FC<{
         case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
         case 'Soporte (PQR)': return <SoportePQR />;
         case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} />;
+        case 'Editar Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} />;
         case 'Generar Ticket': return <CrearTicket onClose={onClose} />;
         case 'Facturación': return <Facturacion onClose={onClose} {...props} />;
 
@@ -121,14 +140,15 @@ const ModuleContent: React.FC<{
         case 'Nómina': return <Nomina />;
         
         case 'Inventario': return <Inventario permissions={permissions} />;
+        case 'Anadir Producto': return <AnadirProducto onClose={onClose} />;
         case 'Compras': return <Compras />;
         case 'Producción': return <Produccion />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
         case 'Gestión de Usuarios': return <GestionUsuarios users={props.users} onDeleteSuccess={props.onDeleteSuccess} permissions={permissions} />;
         case 'Configuración': return <Configuracion />;
-        case 'Registro de Usuario': return <RegistroUsuario onRegisterSuccess={props.onRegisterSuccess} onClose={onClose} permissions={permissions} {...props} />;
-        case 'Editar Usuario': return <RegistroUsuario onUpdateSuccess={props.onUpdateSuccess} onClose={onClose} permissions={permissions} {...props} />;
+        case 'Registro de Usuario': return <RegistroUsuario onRegisterSuccess={props.onRegisterSuccess} onClose={onClose} permissions={permissions} users={props.users} {...props} />;
+        case 'Editar Usuario': return <RegistroUsuario onUpdateSuccess={props.onUpdateSuccess} onClose={onClose} permissions={permissions} users={props.users} {...props} />;
         case 'Gestión de Permisos': return <GestionPermisos onClose={onClose} />;
 
         
@@ -223,12 +243,12 @@ const Window: React.FC<{
             >
                 <span className="window-title">{win.title}</span>
                 <div className="window-controls">
-                    <button onClick={() => onMinimize(win.id)} title="Minimizar">_</button>
-                    <button onClick={handleMaximize} title="Maximizar">□</button>
-                    <button onClick={() => onClose(win.id)} title="Cerrar">X</button>
+                    <button onClick={() => onMinimize(win.id)} title="Minimizar"><Icons.Minimize className="w-4 h-4" /></button>
+                    <button onClick={handleMaximize} title="Maximizar"><Icons.Maximize className="w-4 h-4" /></button>
+                    <button onClick={() => onClose(win.id)} title="Cerrar"><Icons.Close className="w-4 h-4" /></button>
                 </div>
             </div>
-            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') || win.title.includes('Ticket') || win.title.includes('Facturación') ? 'no-padding' : ''}`}>
+            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') || win.title.includes('Ticket') || win.title.includes('Facturación') || win.title.includes('Producto') ? 'no-padding' : ''}`}>
                  <ModuleContent title={win.title} onClose={() => onClose(win.id)} permissions={permissions} {...rest} {...win.props} />
             </div>
         </div>
@@ -415,8 +435,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         }
 
         const existingWindow = windows.find(w => 
-            w.title === title && 
-            (w.props?.userToEdit?.id === props.userToEdit?.id || w.props?.order?.id === props.order?.id)
+            w.title === title && (
+                (props.userToEdit && w.props?.userToEdit?.id === props.userToEdit.id) ||
+                (props.order && w.props?.order?.id === props.order.id) ||
+                (props.orderToEdit && w.props?.orderToEdit?.id === props.orderToEdit.id)
+            )
         );
 
 
@@ -460,7 +483,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     }, [createWindow]);
 
     const updateWindow = (id: string, updates: Partial<WindowState>) => {
-        setWindows(windows.map(w => w.id === id ? { ...w, ...updates } : w));
+        // If a window is being maximized, minimize all other open windows
+        if (updates.isMaximized === true) {
+            const newZIndex = Math.max(...windows.map(w => w.zIndex), 0) + 1;
+            nextZIndex.current = newZIndex + 1;
+    
+            setWindows(prevWindows => prevWindows.map(w => {
+                // Maximize the target window and bring it to the front
+                if (w.id === id) {
+                    return { ...w, ...updates, zIndex: newZIndex, isMinimized: false };
+                }
+                // Minimize all other non-minimized windows
+                if (!w.isMinimized) {
+                    return { ...w, isMinimized: true };
+                }
+                // Leave already minimized windows as they are
+                return w;
+            }));
+        } else {
+            // Default behavior for all other updates (moving, resizing, minimizing, restoring from maximized)
+            setWindows(prevWindows => prevWindows.map(w => w.id === id ? { ...w, ...updates } : w));
+        }
     };
     
     const closeWindow = (id: string) => setWindows(windows.filter(w => w.id !== id));
@@ -768,7 +811,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                         let permissions = permissionKey ? userPermissions[permissionKey] : {};
 
                         // Handle sub-modules to inherit permissions from their parent module
-                        if (win.title === 'Crear Pedido') {
+                        if (win.title === 'Crear Pedido' || win.title === 'Editar Pedido') {
                             permissions = userPermissions[invertedModuleNameMapping['Pedidos de Venta']] || {};
                         } else if (win.title === 'Registro de Usuario' || win.title === 'Editar Usuario') {
                             permissions = userPermissions[invertedModuleNameMapping['Gestión de Usuarios']] || {};

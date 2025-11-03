@@ -67,7 +67,7 @@ const Products: React.FC = () => {
 
     return (
         <div className="">
-            <div className="container mx-auto px-4 py-12">
+            <div className="container mx-auto px-6 sm:px-12 lg:px-24 py-12">
                 <h1 className="text-4xl font-bold text-center text-[var(--color-dark)] mb-4">Explora nuestros Productos</h1>
                 
                 {/* Category Filters */}

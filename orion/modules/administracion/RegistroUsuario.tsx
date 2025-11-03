@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { OrionUser } from '../../data/internalUsers';
 import { roles } from '../../data/permissions';
@@ -8,6 +9,7 @@ interface RegistroUsuarioProps {
     onClose: () => void;
     userToEdit?: OrionUser;
     permissions?: Record<string, boolean>;
+    users: OrionUser[];
 }
 
 // --- ICONS ---
@@ -24,7 +26,7 @@ const PadlockIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 
-const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, onUpdateSuccess, onClose, userToEdit, permissions }) => {
+const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, onUpdateSuccess, onClose, userToEdit, permissions, users }) => {
     const isEditMode = !!userToEdit;
     const canSubmit = isEditMode ? permissions?.actualizar : permissions?.crear;
 
@@ -102,7 +104,17 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
         const newErrors: any = {};
         if (!formData.nombre) newErrors.nombre = 'Nombre es requerido.';
         if (!formData.apellidos) newErrors.apellidos = 'Apellidos son requeridos.';
-        if (!formData.cedula) newErrors.cedula = 'Cédula es requerida.';
+        if (!formData.cedula) {
+            newErrors.cedula = 'Cédula es requerida.';
+        } else {
+            // Check for unique cedula
+            const cedulaExists = users.some(
+                user => user.cedula === formData.cedula && user.id !== userToEdit?.id
+            );
+            if (cedulaExists) {
+                newErrors.cedula = 'Esta cédula ya está registrada.';
+            }
+        }
         if (!formData.correoPersonal) newErrors.correoPersonal = 'Correo es requerido.';
         if (!formData.rol) newErrors.rol = 'Rol es requerido.';
         if (!formData.usuario) newErrors.usuario = 'Usuario no se pudo generar. Verifique Nombre, Apellidos y Cédula.';

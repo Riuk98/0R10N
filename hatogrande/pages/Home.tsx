@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
 import { products, testimonials } from '../data';
@@ -37,42 +38,44 @@ const Home: React.FC = () => {
     return (
         <div className="">
             {/* Banners Section */}
-            <section className="bg-white text-center py-3 text-[var(--color-text)] text-sm font-semibold">
+            <section className="bg-white text-center py-3 text-[var(--color-text)] text-sm font-semibold px-6 sm:px-12 lg:px-24">
                 <p>¡Envío gratis en pedidos superiores a $100.000!</p>
             </section>
 
             {/* Hero Section */}
-            <section 
-                className="relative bg-cover bg-center text-white"
-                style={{ backgroundImage: "url('https://i.postimg.cc/wBcYvM1c/A-como-esta-el-kilo-de-queso-en-Colombia.png')" }}
-            >
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
-                <div className="relative container mx-auto px-2 sm:px-4 lg:px-4 py-8 sm:py-8">
-                    <div className="grid md:grid-cols-2 gap-8 items-center">
-                        {/* Left Column: Text Content */}
-                        <div className="text-center md:text-left">
-                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
-                                <span className="block text-2xl md:text-3xl lg:text-4xl font-semibold opacity-90">Sabor y Tradición</span>
-                                Directo del Campo
-                            </h1>
-                            <p className="mt-4 text-base md:text-lg max-w-xl mx-auto md:mx-0">
-                                Descubre la frescura y calidad de nuestros productos lácteos, elaborados con amor y la mejor leche de Hato Grande.
-                            </p>
-                            <button 
-                                onClick={() => navigateTo('products')} 
-                                className="mt-6 px-8 py-3 bg-[var(--color-primary)] text-[var(--color-dark)] font-bold rounded-full hover:bg-[var(--color-accent)] transition-all duration-300 text-base transform hover:scale-105 shadow-lg"
-                            >
-                                Ver Productos
-                            </button>
-                        </div>
+            <section className="px-6 sm:px-12 lg:px-24 py-8">
+                <div 
+                    className="relative bg-cover bg-center text-white rounded-lg shadow-lg overflow-hidden"
+                    style={{ backgroundImage: "url('https://i.postimg.cc/wBcYvM1c/A-como-esta-el-kilo-de-queso-en-Colombia.png')" }}
+                >
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+                    <div className="relative container mx-auto px-6 sm:px-10 lg:px-16 py-12 sm:py-16 lg:py-24">
+                        <div className="grid md:grid-cols-2 gap-8 items-center">
+                            {/* Left Column: Text Content */}
+                            <div className="text-center md:text-left">
+                                <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
+                                    <span className="block text-2xl md:text-3xl lg:text-4xl font-semibold opacity-90">Sabor y Tradición</span>
+                                    Directo del Campo
+                                </h1>
+                                <p className="mt-4 text-base md:text-lg max-w-xl mx-auto md:mx-0">
+                                    Descubre la frescura y calidad de nuestros productos lácteos, elaborados con amor y la mejor leche de Hato Grande.
+                                </p>
+                                <button 
+                                    onClick={() => navigateTo('products')} 
+                                    className="mt-6 px-8 py-3 bg-[var(--color-primary)] text-[var(--color-dark)] font-bold rounded-full hover:bg-[var(--color-accent)] transition-all duration-300 text-base transform hover:scale-105 shadow-lg"
+                                >
+                                    Ver Productos
+                                </button>
+                            </div>
 
-                        {/* Right Column: Image */}
-                        <div className="flex justify-center md:justify-end items-center mt-5 md:mt-0">
-                            <img 
-                                src="https://i.postimg.cc/MZVdPpF7/Generated-Image-October-20-2025-3-45-PM-1.png"
-                                alt="Empaque de producto Hato Grande" 
-                                className="rounded-lg w-full max-w-md md:max-w-lg lg:max-w-2xl"
-                            />
+                            {/* Right Column: Image */}
+                            <div className="flex justify-center md:justify-end items-center mt-5 md:mt-0">
+                                <img 
+                                    src="https://i.postimg.cc/MZVdPpF7/Generated-Image-October-20-2025-3-45-PM-1.png"
+                                    alt="Empaque de producto Hato Grande" 
+                                    className="rounded-lg w-full max-w-md md:max-w-lg lg:max-w-2xl"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -80,42 +83,36 @@ const Home: React.FC = () => {
             
       
             {/* Bestsellers Section */}
-            <section className="py-16">
-                <div className="container mx-auto px-4">
-                    <h2 className="text-3xl font-bold text-center text-[var(--color-dark)] mb-10">Nuestros Más Vendidos</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {bestsellers.slice(0, 3).map(product => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
-                    </div>
+            <section className="py-16 px-6 sm:px-12 lg:px-24">
+                <h2 className="text-3xl font-bold text-center text-[var(--color-dark)] mb-10">Nuestros Más Vendidos</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {bestsellers.slice(0, 3).map(product => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
                 </div>
             </section>
             
              {/* Offers Section */}
-            <section className="py-16">
-                <div className="container mx-auto px-4">
-                    <h2 className="text-3xl font-bold text-center text-[var(--color-dark)] mb-10">Ofertas Especiales</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8">
-                        {offers.map(product => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
-                    </div>
+            <section className="py-16 px-6 sm:px-12 lg:px-24">
+                <h2 className="text-3xl font-bold text-center text-[var(--color-dark)] mb-10">Ofertas Especiales</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8">
+                    {offers.map(product => (
+                        <ProductCard key={product.id} product={product} />
+                    ))}
                 </div>
             </section>
             
             {/* Testimonials Section */}
-            <section className="py-16">
-                <div className="container mx-auto px-4">
-                    <h2 className="text-3xl font-bold text-center text-[var(--color-dark)] mb-12">Lo que dicen nuestros clientes</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {testimonials.map(testimonial => (
-                            <div key={testimonial.id} className="bg-white p-8 rounded-xl text-center shadow-lg transition-transform hover:scale-105 border-2 border-transparent hover:border-[var(--color-primary)]">
-                                <img src={testimonial.image} alt={testimonial.name} className="w-24 h-24 rounded-full mx-auto mb-5 border-4 border-white shadow-md" />
-                                <p className="text-[var(--color-text)] italic mb-4">"{testimonial.quote}"</p>
-                                <h4 className="font-semibold text-[var(--color-dark)]">{testimonial.name}</h4>
-                            </div>
-                        ))}
-                    </div>
+            <section className="py-16 px-6 sm:px-12 lg:px-24">
+                <h2 className="text-3xl font-bold text-center text-[var(--color-dark)] mb-12">Lo que dicen nuestros clientes</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {testimonials.map(testimonial => (
+                        <div key={testimonial.id} className="bg-white p-8 rounded-xl text-center shadow-lg transition-transform hover:scale-105 border-2 border-transparent hover:border-[var(--color-primary)]">
+                            <img src={testimonial.image} alt={testimonial.name} className="w-24 h-24 rounded-full mx-auto mb-5 border-4 border-white shadow-md" />
+                            <p className="text-[var(--color-text)] italic mb-4">"{testimonial.quote}"</p>
+                            <h4 className="font-semibold text-[var(--color-dark)]">{testimonial.name}</h4>
+                        </div>
+                    ))}
                 </div>
             </section>
 

@@ -1,7 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { INTERNAL_USERS, OrionUser } from '../data/internalUsers';
-import RippleEffect from './RippleEffect';
 
 interface LoginProps {
     onLoginSuccess: () => void;
@@ -20,6 +19,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [registeredUsers, setRegisteredUsers] = useState<OrionUser[]>([]);
+    const backgroundRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
@@ -34,6 +34,32 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             console.error("Failed to load Orion users from localStorage for login", error);
             setRegisteredUsers(INTERNAL_USERS);
         }
+    }, []);
+
+    useEffect(() => {
+        const $ = (window as any).$;
+        const target = backgroundRef.current;
+        if ($ && target && typeof $.fn.ripples === 'function') {
+            try {
+                $(target).ripples({
+                    resolution: 512,
+                    dropRadius: 20,
+                    perturbance: 0.04,
+                });
+            } catch (e) {
+                console.error("Could not init ripples", e);
+            }
+        }
+
+        return () => {
+            if ($ && target && typeof $(target).data('ripples') !== 'undefined') {
+                try {
+                    $(target).ripples('destroy');
+                } catch(e) {
+                    console.error("Could not destroy ripples", e);
+                }
+            }
+        };
     }, []);
 
 
@@ -61,9 +87,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
      return (
         <>
             <div
-                className="h-screen w-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#fffafa] to-[#a7d9f2] relative overflow-hidden"
+                ref={backgroundRef}
+                className="h-screen w-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#fffafa] to-[#018B9F] relative overflow-hidden"
             >
-                 <RippleEffect />
 
                 <div className="w-full max-w-xs z-10" onClick={(e) => e.stopPropagation()}>
                     <div className="bg-white/20 backdrop-blur-[10px] rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] pt-3 px-6 pb-6 space-y-4 border border-white/30">

@@ -1,4 +1,22 @@
-import React, { useState } from 'react';
+
+
+import React, { useState, useEffect, useCallback } from 'react';
+
+// --- TYPE DEFINITION ---
+export interface OrionProduct {
+    id: string; // The unique code from the form
+    codigo: string;
+    nombre: string;
+    cantidad: number;
+    valorUnitario: number;
+    categoria: string;
+    fechaLote: string;
+    fechaVencimiento: string;
+    stockMin: number;
+    stockMax: number;
+}
+
+const ORION_PRODUCTS_STORAGE_KEY = 'orionProducts';
 
 // --- ICONS ---
 const SpinnerIcon = () => (
@@ -15,7 +33,7 @@ const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <line x1="12" y1="5" x2="12" y2="19"></line>
         <line x1="5" y1="12" x2="19" y2="12"></line>
     </svg>
@@ -29,7 +47,7 @@ const EditIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="3 6 5 6 21 6"></polyline>
         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
     </svg>
@@ -42,15 +60,35 @@ interface InventarioProps {
 const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
     const [activeTab, setActiveTab] = useState<'productos' | 'insumos'>('productos');
     const [isSearching, setIsSearching] = useState(false);
+    const [products, setProducts] = useState<OrionProduct[]>([]);
+
+    const loadProducts = useCallback(() => {
+        try {
+            const storedProducts = localStorage.getItem(ORION_PRODUCTS_STORAGE_KEY);
+            setProducts(storedProducts ? JSON.parse(storedProducts) : []);
+        } catch (error) {
+            console.error("Failed to load products from localStorage", error);
+            setProducts([]);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadProducts();
+        window.addEventListener('storage', loadProducts);
+        return () => {
+            window.removeEventListener('storage', loadProducts);
+        };
+    }, [loadProducts]);
+
 
     const headersProductos = [
         "Codigo", "Nombre", "Cantidad", "Valor u.", "Categoria", 
-        "F. Lote", "F. Vencimiento", "Stock Min.", "Stock Max."
+        "F. Lote", "F. Vencimiento"
     ];
 
     const headersInsumos = [
         "Codigo", "Nombre", "Cantidad", "Categoria", "F. Compra", 
-        "F. Vencimiento", "Factura", "Stock Min.", "Stock Max."
+        "F. Vencimiento", "Factura"
     ];
 
     const headers = activeTab === 'productos' ? headersProductos : headersInsumos;
@@ -60,6 +98,16 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
         setTimeout(() => {
             setIsSearching(false);
         }, 1500);
+    };
+
+    const handleAddProduct = () => {
+        window.dispatchEvent(new CustomEvent('createOrionWindow', {
+            detail: { title: 'Anadir Producto' }
+        }));
+    };
+
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
     };
 
     return (
@@ -101,6 +149,11 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
                     color: var(--text-primary);
                     transition: background-color 0.3s, color 0.3s, border-color 0.3s;
                 }
+                 .inventario-table tbody td {
+                    border: 1px solid var(--border-color);
+                    padding: 6px 10px;
+                    font-size: 0.85rem;
+                 }
                 .inventario-table tbody {
                      background-color: var(--bg-card);
                      transition: background-color 0.3s;
@@ -179,8 +232,25 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody className="h-full">
-                                {/* Empty state to match the image */}
+                            <tbody>
+                                {activeTab === 'productos' && products.map(product => (
+                                    <tr key={product.id}>
+                                        <td>{product.codigo}</td>
+                                        <td>{product.nombre}</td>
+                                        <td>{product.cantidad}</td>
+                                        <td>{formatCurrency(product.valorUnitario)}</td>
+                                        <td>{product.categoria}</td>
+                                        <td>{product.fechaLote}</td>
+                                        <td>{product.fechaVencimiento}</td>
+                                    </tr>
+                                ))}
+                                {products.length === 0 && activeTab === 'productos' && (
+                                     <tr>
+                                        <td colSpan={headers.length} className="text-center p-8 text-[var(--text-secondary)]">
+                                            No hay productos en el inventario. Añade uno para empezar.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -189,7 +259,7 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
 
             {/* Bottom Actions */}
             <div className="p-2 flex items-center gap-4">
-                <button className="action-btn" title={permissions?.crear ? "Añadir" : "No tiene permisos para crear"} disabled={!permissions?.crear}>
+                <button className="action-btn" onClick={handleAddProduct} title={permissions?.crear ? "Añadir" : "No tiene permisos para crear"} disabled={!permissions?.crear}>
                     <PlusIcon />
                 </button>
                 <button className="action-btn" title={permissions?.actualizar ? "Editar" : "No tiene permisos para actualizar"} disabled={!permissions?.actualizar}>

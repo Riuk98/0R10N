@@ -27,36 +27,6 @@ const constellationData = {
     ]
 };
 
-// Additional background stars for a fuller starfield effect
-const backgroundStars = {
-    nodes: [
-        { id: 'bg-1', cx: 50, cy: 200, r: 2 },
-        { id: 'bg-2', cx: 400, cy: 50, r: 2 },
-        { id: 'bg-3', cx: 250, cy: 50, r: 2 },
-        { id: 'bg-4', cx: 20, cy: 400, r: 2 },
-        { id: 'bg-5', cx: 430, cy: 250, r: 2 },
-        { id: 'bg-6', cx: 150, cy: 400, r: 2 },
-        { id: 'bg-7', cx: 300, cy: 580, r: 2 },
-        { id: 'bg-8', cx: 180, cy: 200, r: 2 },
-        { id: 'bg-9', cx: 380, cy: 400, r: 2 },
-        { id: 'bg-10', cx: 80, cy: 20, r: 2 },
-        { id: 'bg-11', cx: 20, cy: 580, r: 2 },
-        { id: 'bg-12', cx: 440, cy: 590, r: 2 },
-    ],
-    lines: [
-        { from: 'bg-1', to: 'bg-4', len: 202 },
-        { from: 'bg-2', to: 'bg-3', len: 150 },
-        { from: 'bg-5', to: 'bellatrix', len: 144 },
-        { from: 'bg-6', to: 'saiph', len: 104 },
-        { from: 'bg-7', to: 'rigel', len: 100 },
-        { from: 'bg-8', to: 'alnitak', len: 102 },
-        { from: 'bg-9', to: 'bg-5', len: 158 },
-        { from: 'bg-10', to: 'betelgeuse', len: 82 },
-        { from: 'bg-11', to: 'bg-6', len: 194 },
-        { from: 'bg-12', to: 'bg-7', len: 140 },
-    ]
-};
-
 
 const GearIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -84,54 +54,29 @@ const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
         return () => clearInterval(timer);
     }, [onLoadingComplete]);
 
-    const lineElements = useMemo(() => {
-        const allNodes = [...constellationData.nodes, ...backgroundStars.nodes];
-        const allLines = [...constellationData.lines, ...backgroundStars.lines];
-        
-        const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+    const mainLines = useMemo(() => {
+        const nodeMap = new Map(constellationData.nodes.map(n => [n.id, n]));
 
-        return {
-            mainLines: constellationData.lines.map((line, index) => {
-                const fromNode = nodeMap.get(line.from);
-                const toNode = nodeMap.get(line.to);
-                if (!fromNode || !toNode) return null;
-                return (
-                    <line
-                        key={`main-${index}`}
-                        className="star-line"
-                        x1={fromNode.cx}
-                        y1={fromNode.cy}
-                        x2={toNode.cx}
-                        y2={toNode.cy}
-                        stroke="#042940"
-                        strokeWidth="0.5"
-                        strokeDasharray={line.len}
-                        strokeDashoffset={line.len}
-                        style={{ animationDelay: `${0.5 + index * 0.15}s` }}
-                    />
-                );
-            }),
-            backgroundLines: backgroundStars.lines.map((line, index) => {
-                 const fromNode = nodeMap.get(line.from);
-                const toNode = nodeMap.get(line.to);
-                if (!fromNode || !toNode) return null;
-                return (
-                     <line
-                        key={`bg-${index}`}
-                        className="star-line-bg"
-                        x1={fromNode.cx}
-                        y1={fromNode.cy}
-                        x2={toNode.cx}
-                        y2={toNode.cy}
-                        stroke="#042940"
-                        strokeWidth="0.5"
-                        strokeDasharray={line.len}
-                        strokeDashoffset={line.len}
-                        style={{ animationDelay: `${1.2 + index * 0.1}s` }}
-                    />
-                );
-            })
-        };
+        return constellationData.lines.map((line, index) => {
+            const fromNode = nodeMap.get(line.from);
+            const toNode = nodeMap.get(line.to);
+            if (!fromNode || !toNode) return null;
+            return (
+                <line
+                    key={`main-${index}`}
+                    className="star-line"
+                    x1={fromNode.cx}
+                    y1={fromNode.cy}
+                    x2={toNode.cx}
+                    y2={toNode.cy}
+                    stroke="#042940"
+                    strokeWidth="0.5"
+                    strokeDasharray={line.len}
+                    strokeDashoffset={line.len}
+                    style={{ animationDelay: `${0.5 + index * 0.15}s` }}
+                />
+            );
+        });
     }, []);
 
     return (
@@ -145,10 +90,6 @@ const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
                 @keyframes pulse {
                     0%, 100% { transform: scale(1); opacity: 0.7; }
                     50% { transform: scale(1.1); opacity: 1; }
-                }
-                 @keyframes pulse-bg {
-                    0%, 100% { transform: scale(1); opacity: 0.5; }
-                    50% { transform: scale(1.1); opacity: 0.8; }
                 }
 
                 @keyframes drawLine {
@@ -197,16 +138,8 @@ const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
                     transform-origin: center;
                     animation: fadeIn 0.5s forwards, pulse 3s infinite ease-in-out;
                 }
-                .star-node-bg {
-                    opacity: 0;
-                    transform-origin: center;
-                    animation: fadeIn 0.8s forwards, pulse-bg 5s infinite ease-in-out;
-                }
                 .star-line {
                     animation: drawLine 1s forwards ease-out;
-                }
-                 .star-line-bg {
-                    animation: drawLine 1.5s forwards ease-out;
                 }
             `}</style>
             <div className="preloader-container">
@@ -222,8 +155,7 @@ const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
                     </defs>
                     
                     {/* Render Lines */}
-                    {lineElements.mainLines}
-                    {lineElements.backgroundLines}
+                    {mainLines}
                     
                     {/* Render Stars */}
                     {constellationData.nodes.map((node, index) => (
@@ -237,18 +169,6 @@ const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
                             fill="#042940"
                             filter="url(#node-glow)"
                             style={{ animationDelay: `${index * 0.15}s, ${index * 0.2}s` }}
-                        />
-                    ))}
-                     {backgroundStars.nodes.map((node, index) => (
-                        <circle
-                            key={node.id}
-                            id={node.id}
-                            className="star-node-bg"
-                            cx={node.cx}
-                            cy={node.cy}
-                            r={node.r}
-                            fill="#042940"
-                            style={{ animationDelay: `${1.0 + index * 0.1}s, ${1.0 + index * 0.3}s` }}
                         />
                     ))}
                 </svg>

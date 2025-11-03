@@ -30,6 +30,7 @@ const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
 interface CrearPedidoProps {
     onClose: () => void;
     permissions?: Record<string, boolean>;
+    orderToEdit?: any;
 }
 
 interface OrderItem {
@@ -74,7 +75,8 @@ const ActionButton = ({ icon, title, onClick, disabled }: { icon: React.ReactNod
     </button>
 );
 
-const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
+const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderToEdit }) => {
+    const isEditMode = !!orderToEdit;
     const [orderId, setOrderId] = useState('');
     const [client, setClient] = useState({ nombre: '', nit: '', direccion: '', telefono: '', email: '' });
     const [searchError, setSearchError] = useState<string | null>(null);
@@ -106,8 +108,35 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
     }, []);
 
     useEffect(() => {
-        setOrderId(getNewOrderId());
-    }, []);
+        if (isEditMode) {
+            setOrderId(orderToEdit.id);
+            setClient({
+                nombre: orderToEdit.clientName,
+                nit: orderToEdit.clientNit || '',
+                direccion: orderToEdit.clientAddress || '',
+                telefono: orderToEdit.clientPhone || '',
+                email: orderToEdit.clientEmail || '',
+            });
+            setOrderDate(new Date(orderToEdit.creationDate).toISOString().split('T')[0]);
+            setDeliveryDate(orderToEdit.deliveryDate ? new Date(orderToEdit.deliveryDate).toISOString().split('T')[0] : '');
+            setPaymentMethod(orderToEdit.paymentMethod || '');
+            setItems(orderToEdit.items.map((item: any, index: number) => ({
+                id: Date.now() + index,
+                productId: item.productId,
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discount: item.discount || 0,
+                totalPrice: item.totalPrice,
+            })));
+            setSeller({ id: orderToEdit.sellerId || '001', name: orderToEdit.sellerName || 'Martha Milena' });
+            setObservations(orderToEdit.observations || '');
+            setIsConfirmed(orderToEdit.status !== 'Abierto');
+        } else {
+            setOrderId(getNewOrderId());
+        }
+    }, [isEditMode, orderToEdit]);
+
 
     useEffect(() => {
         const bruto = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
@@ -212,7 +241,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
         }
 
         const newOrder = {
-            id: orderId,
+            id: isEditMode ? orderToEdit.id : orderId,
             creationDate: new Date(orderDate).toISOString(),
             clientName: client.nombre,
             clientNit: client.nit,
@@ -236,23 +265,38 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
             sellerName: seller.name,
             observations: observations,
             source: 'CRM',
-            status: isConfirmed ? 'En proceso' : 'Abierto',
+            status: isConfirmed ? 'En proceso' : (isEditMode ? orderToEdit.status : 'Abierto'),
         };
 
         const storedPedidos = JSON.parse(localStorage.getItem('hatoGrandePedidos') || '[]');
-        storedPedidos.push(newOrder);
+        if (isEditMode) {
+            const index = storedPedidos.findIndex((o: any) => o.id === orderToEdit.id);
+            if (index > -1) {
+                storedPedidos[index] = newOrder;
+            } else {
+                storedPedidos.push(newOrder); // Fallback
+            }
+        } else {
+            storedPedidos.push(newOrder);
+        }
+        
         localStorage.setItem('hatoGrandePedidos', JSON.stringify(storedPedidos));
         window.dispatchEvent(new Event("storage"));
         
         return newOrder;
     };
 
+
     const handleSimpleSave = () => {
         if (isConfirmed) return;
         const savedOrder = saveOrderLogic(false);
         if(savedOrder) {
-            alert(`Pedido ${orderId} guardado exitosamente.`);
-            resetForm();
+            alert(`Pedido ${savedOrder.id} ${isEditMode ? 'actualizado' : 'guardado'} exitosamente.`);
+            if (!isEditMode) {
+                resetForm();
+            } else {
+                onClose();
+            }
         }
     };
     
@@ -270,7 +314,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
         }
     };
     
-    if (isConfirmed) {
+    if (isConfirmed && !isEditMode) {
         return (
             <div className="flex flex-col h-full bg-[var(--bg-card)] text-[var(--text-primary)] items-center justify-center text-center p-8">
                 <CheckIcon className="w-20 h-20 text-green-500 mb-4" />
@@ -382,7 +426,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions }) => {
 
                 <div className="pt-4 mt-4 border-t border-[var(--border-color)] flex justify-end items-center">
                     <div className="flex items-center gap-2">
-                        <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSimpleSave} disabled={!permissions?.crear || isConfirmed} />
+                        <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSimpleSave} disabled={(!permissions?.crear && !isEditMode) || (!permissions?.actualizar && isEditMode) || isConfirmed} />
                         <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" disabled={!permissions?.eliminar || isConfirmed} />
                         <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" disabled={!permissions?.actualizar || isConfirmed} />
                         <ActionButton icon={<CheckIcon className="w-5 h-5 text-green-600"/>} title="Confirmar" onClick={handleConfirmAndInvoice} disabled={!permissions?.crear || isConfirmed} />
