@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
+// FIX: Refactored to use styled-components to resolve style parsing errors and align with project patterns.
+import styled, { keyframes } from 'styled-components';
 
 // Define la estructura de datos para una única onda (ripple).
 interface Ripple {
@@ -15,6 +17,43 @@ interface RippleEffectProps {
     size?: number;      // Tamaño final de la onda en píxeles.
     interval?: number;  // Tiempo en milisegundos entre la creación de cada nueva onda.
 }
+
+// Define los pasos de la animación de la onda.
+const rippleAnimation = (size: number) => keyframes`
+    /* Estado inicial de la animación. */
+    0% {
+        width: 0;
+        height: 0;
+        opacity: 1; /* Comienza con algo de opacidad para ser visible. */
+    }
+    /* Estado al 90% de la animación. */
+    90% {
+        width: ${size}px; /* Crece hasta el tamaño máximo definido en las props. */
+        height: ${size}px;
+        opacity: 0.7; /* Mantiene la opacidad. */
+    }
+    /* Estado final: se mantiene en el tamaño máximo antes de ser eliminado del DOM. */
+    100% {
+        width: ${size}px;
+        height: ${size}px;
+        opacity: 0.1;
+    }
+`;
+
+// Estilo base para cada elemento de onda.
+const RippleSpan = styled.span<{ color: string; duration: number; size: number; left: number; top: number; }>`
+    position: absolute; /* Posicionamiento absoluto para colocarlo según las coordenadas \`top\` y \`left\`. */
+    border-radius: 50%; /* Lo hace un círculo. */
+    transform: translate(-50%, -50%); /* Ajuste para centrar mejor el origen de la onda. */
+    animation-name: ${props => rippleAnimation(props.size)}; /* Asigna la animación definida en @keyframes. */
+    animation-timing-function: linear; /* La animación progresa a una velocidad constante. */
+    
+    /* Las siguientes propiedades se establecen dinámicamente desde las props del componente. */
+    box-shadow: 0 0 25px ${props => props.color}, inset 0 0 25px ${props => props.color}; /* Crea un efecto de resplandor usando el color de la prop. */
+    animation-duration: ${props => props.duration}s; /* Establece la duración de la animación. */
+    left: ${props => props.left}px;
+    top: ${props => props.top}px;
+`;
 
 // El componente funcional principal. Se le asignan valores por defecto a las props.
 const RippleEffect: React.FC<RippleEffectProps> = ({
@@ -59,54 +98,16 @@ const RippleEffect: React.FC<RippleEffectProps> = ({
 
     return (
         <>
-            {/* Bloque de estilos CSS en línea para controlar la animación. */}
-            <style>{`
-                /* Estilo base para cada elemento de onda. */
-                .ripple-effect {
-                    position: absolute; /* Posicionamiento absoluto para colocarlo según las coordenadas `top` y `left`. */
-                    border-radius: 50%; /* Lo hace un círculo. */
-                    // FIX: Corrected invalid CSS transform syntax which caused an arithmetic error.
-                    transform: translate(-50%, -50%); /* Ajuste para centrar mejor el origen de la onda. */
-                    animation-name: ripple-animation; /* Asigna la animación definida en @keyframes. */
-                    animation-timing-function: linear; /* La animación progresa a una velocidad constante. */
-                    
-                    /* Las siguientes propiedades se establecen dinámicamente desde las props del componente. */
-                    box-shadow: 0 0 25px ${color}, inset 0 0 25px ${color}; /* Crea un efecto de resplandor usando el color de la prop. */
-                    animation-duration: ${duration}s; /* Establece la duración de la animación. */
-                }
-
-                /* Define los pasos de la animación de la onda. */
-                @keyframes ripple-animation {
-                    /* Estado inicial de la animación. */
-                    0% {
-                        width: 0;
-                        height: 0;
-                        opacity: 1; /* Comienza con algo de opacidad para ser visible. */
-                    }
-                    /* Estado al 90% de la animación. */
-                    90% {
-                        // FIX: Replaced undefined 'width' variable with the 'size' prop.
-                        width: ${size}px; /* Crece hasta el tamaño máximo definido en las props. */
-                        height: ${size}px;
-                        opacity: 0.7; /* Mantiene la opacidad. */
-                    }
-                    /* Estado final: se mantiene en el tamaño máximo antes de ser eliminado del DOM. */
-                    100% {
-                        // FIX: Replaced undefined 'width' variable with the 'size' prop.
-                        width: ${size}px;
-                        height: ${size}px;
-                        opacity: 0.1;
-                    }
-                }
-            `}</style>
-            
             {/* Mapea el array de `ripples` del estado para renderizar un <span> por cada onda. */}
             {ripples.map(ripple => (
-                <span
+                <RippleSpan
                     key={ripple.key} // Clave única para que React identifique cada elemento.
-                    className="ripple-effect"
-                    // Aplica el posicionamiento inicial de la onda.
-                    style={{ left: ripple.left, top: ripple.top }} 
+                    // Aplica el posicionamiento y estilo inicial de la onda.
+                    color={color}
+                    duration={duration}
+                    size={size}
+                    left={ripple.left}
+                    top={ripple.top}
                 />
             ))}
         </>

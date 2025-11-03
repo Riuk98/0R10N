@@ -1,191 +1,232 @@
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import styled, { keyframes } from 'styled-components';
 
 interface PreloaderProps {
     onLoadingComplete: () => void;
 }
 
-// Main Orion constellation stars, positioned to fill more of the screen
-const constellationData = {
-    nodes: [
-        { id: 'betelgeuse', cx: 100, cy: 100, r: 4 }, // Top-left shoulder
-        { id: 'bellatrix', cx: 350, cy: 130, r: 4 }, // Top-right shoulder
-        { id: 'alnitak', cx: 200, cy: 300, r: 4 },   // Left belt star
-        { id: 'alnilam', cx: 250, cy: 320, r: 4 },     // Middle belt star
-        { id: 'mintaka', cx: 300, cy: 340, r: 4 },   // Right belt star
-        { id: 'saiph', cx: 120, cy: 500, r: 4 },       // Bottom-left knee
-        { id: 'rigel', cx: 380, cy: 520, r: 4 },       // Bottom-right knee
-    ],
-    lines: [
-        { from: 'betelgeuse', to: 'alnitak', len: 223 },
-        { from: 'bellatrix', to: 'mintaka', len: 216 },
-        { from: 'alnitak', to: 'alnilam', len: 54 },
-        { from: 'alnilam', to: 'mintaka', len: 54 },
-        { from: 'alnitak', to: 'saiph', len: 215 },
-        { from: 'mintaka', to: 'rigel', len: 197 },
-        { from: 'betelgeuse', to: 'bellatrix', len: 251 },
-    ]
-};
+// --- Keyframes ---
+const fadeIn = keyframes`
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+`;
 
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
 
-const GearIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+// --- Styled Components ---
+const PreloaderContainer = styled.div`
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom right, #e0f2fe, #7dd3fc);
+    z-index: 9999;
+    overflow: hidden;
+`;
+
+const Canvas = styled.canvas`
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+`;
+
+const Logo = styled.img`
+    width: 100%;
+    max-width: 250px;
+    animation: ${fadeIn} 1.2s ease-out forwards;
+    z-index: 10;
+    filter: drop-shadow(0 0 1.5rem rgba(0, 0, 0, 0.4));
+`;
+
+const LoadingContainer = styled.div`
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 10;
+    animation: ${fadeIn} 1.2s ease-out forwards;
+    animation-delay: 0.2s;
+    opacity: 0;
+`;
+
+const PercentageText = styled.p`
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #042940;
+    letter-spacing: 0.1em;
+`;
+
+const SpinningGear = styled.div`
+    width: 2rem;
+    height: 2rem;
+    color: #042940;
+    animation: ${spin} 2s linear infinite;
+`;
+
+// --- SVG Icon ---
+const GearIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5zm7.43-2.53l1.49-1.49c.2-.2.2-.51 0-.71l-1.42-1.42c-.2-.2-.51-.2-.71 0l-1.95 1.95c-.4-.28-.85-.48-1.34-.6V7.25c0-.28-.22-.5-.5-.5h-2c-.28 0-.5.22-.5.5v1.95c-.49.12-.94-.32-1.34.6L7.6 7.84c-.2-.2-.51-.2-.71 0L5.47 9.26c-.2.2-.2.51 0 .71l1.49 1.49c-.08.47-.16.94-.16 1.43s.08.96.16 1.43l-1.49 1.49c-.2.2-.2.51 0 .71l1.42 1.42c.2.2.51.2.71 0l1.95-1.95c.4.28.85.48 1.34.6v1.95c0 .28.22.5.5.5h2c.28 0 .5-.22.5-.5v-1.95c.49-.12.94-.32-1.34-.6l1.95 1.95c.2.2.51.2.71 0l1.42-1.42c-.2-.2.2-.51 0-.71l-1.49-1.49c.08-.47.16-.94-.16-1.43s-.08-.96-.16-1.43z"/>
     </svg>
 );
 
 
+// --- Particle Logic ---
+class Particle {
+    x: number;
+    y: number;
+    size: number;
+    speedX: number;
+    speedY: number;
+
+    constructor(canvasWidth: number, canvasHeight: number) {
+        this.x = Math.random() * canvasWidth;
+        this.y = Math.random() * canvasHeight;
+        this.size = Math.random() * 2 + 1;
+        this.speedX = (Math.random() * 2 - 1) * 0.5;
+        this.speedY = (Math.random() * 2 - 1) * 0.5;
+    }
+
+    update(canvasWidth: number, canvasHeight: number) {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x > canvasWidth) this.x = 0;
+        else if (this.x < 0) this.x = canvasWidth;
+        if (this.y > canvasHeight) this.y = 0;
+        else if (this.y < 0) this.y = canvasHeight;
+    }
+
+    draw(ctx: CanvasRenderingContext2D) {
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        // FIX: Changed `ctx.fill('nonzero')` to `ctx.fill()` to resolve an argument mismatch error. The 'nonzero' fill rule is the default, so this change maintains the original behavior while fixing the compilation issue.
+        ctx.fill();
+    }
+}
+
+
 const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
-    const [progress, setProgress] = useState(0);
-    
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const particlesRef = useRef<Particle[]>([]);
+    const animationFrameId = useRef<number>();
+    const [percentage, setPercentage] = useState(0);
+
     useEffect(() => {
-        const timer = setInterval(() => {
-            setProgress(prevProgress => {
-                if (prevProgress >= 100) {
-                    clearInterval(timer);
-                    setTimeout(onLoadingComplete, 300);
+        const DURATION = 4000; // Total duration in ms
+
+        const completeTimer = setTimeout(() => {
+            onLoadingComplete();
+        }, DURATION + 500);
+
+        const percentageInterval = setInterval(() => {
+            setPercentage(prev => {
+                const next = prev + 1;
+                if (next > 100) {
+                    clearInterval(percentageInterval);
                     return 100;
                 }
-                return prevProgress + 1;
+                return next;
             });
-        }, 50); 
+        }, DURATION / 100);
 
-        return () => clearInterval(timer);
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const numberOfParticles = Math.floor((canvas.width * canvas.height) / 5000);
+        particlesRef.current = [];
+        for (let i = 0; i < numberOfParticles; i++) {
+            particlesRef.current.push(new Particle(canvas.width, canvas.height));
+        }
+
+        const connect = () => {
+            const connectDistance = 80;
+            let opacityValue = 1;
+            for (let a = 0; a < particlesRef.current.length; a++) {
+                for (let b = a; b < particlesRef.current.length; b++) {
+                    const distance = Math.sqrt(
+                        Math.pow(particlesRef.current[a].x - particlesRef.current[b].x, 2) +
+                        Math.pow(particlesRef.current[a].y - particlesRef.current[b].y, 2)
+                    );
+
+                    if (distance < connectDistance) {
+                        opacityValue = 1 - (distance / connectDistance);
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${opacityValue})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(particlesRef.current[a].x, particlesRef.current[a].y);
+                        ctx.lineTo(particlesRef.current[b].x, particlesRef.current[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        };
+
+        const animate = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const particle of particlesRef.current) {
+                particle.update(canvas.width, canvas.height);
+                particle.draw(ctx);
+            }
+            connect();
+            animationFrameId.current = requestAnimationFrame(animate);
+        };
+
+        animate();
+
+        const handleResize = () => {
+            if (canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                const newNumberOfParticles = Math.floor((canvas.width * canvas.height) / 5000);
+                particlesRef.current = [];
+                 for (let i = 0; i < newNumberOfParticles; i++) {
+                    particlesRef.current.push(new Particle(canvas.width, canvas.height));
+                }
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            clearTimeout(completeTimer);
+            clearInterval(percentageInterval);
+            if (animationFrameId.current) {
+                cancelAnimationFrame(animationFrameId.current);
+            }
+            window.removeEventListener('resize', handleResize);
+        };
     }, [onLoadingComplete]);
 
-    const mainLines = useMemo(() => {
-        const nodeMap = new Map(constellationData.nodes.map(n => [n.id, n]));
-
-        return constellationData.lines.map((line, index) => {
-            const fromNode = nodeMap.get(line.from);
-            const toNode = nodeMap.get(line.to);
-            if (!fromNode || !toNode) return null;
-            return (
-                <line
-                    key={`main-${index}`}
-                    className="star-line"
-                    x1={fromNode.cx}
-                    y1={fromNode.cy}
-                    x2={toNode.cx}
-                    y2={toNode.cy}
-                    stroke="#042940"
-                    strokeWidth="0.5"
-                    strokeDasharray={line.len}
-                    strokeDashoffset={line.len}
-                    style={{ animationDelay: `${0.5 + index * 0.15}s` }}
-                />
-            );
-        });
-    }, []);
-
     return (
-        <>
-            <style>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-
-                @keyframes pulse {
-                    0%, 100% { transform: scale(1); opacity: 0.7; }
-                    50% { transform: scale(1.1); opacity: 1; }
-                }
-
-                @keyframes drawLine {
-                    to { stroke-dashoffset: 0; }
-                }
-                
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-
-                .animate-spin {
-                    animation: spin 1s linear infinite;
-                }
-
-                .preloader-container {
-                    position: relative;
-                    height: 100vh;
-                    width: 100vw;
-                    background-image: linear-gradient(to bottom right, #fffafa, #a7d9f2);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-direction: column;
-                    overflow: hidden;
-                }
-                .content-overlay {
-                    z-index: 10;
-                    width: 100%;
-                    max-width: 20rem; 
-                    text-align: center;
-                    opacity: 0;
-                    animation: fadeIn 1s ease-in-out forwards;
-                    animation-delay: 2.5s;
-                }
-                .background-canvas {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    z-index: 1;
-                }
-                .star-node {
-                    opacity: 0;
-                    transform-origin: center;
-                    animation: fadeIn 0.5s forwards, pulse 3s infinite ease-in-out;
-                }
-                .star-line {
-                    animation: drawLine 1s forwards ease-out;
-                }
-            `}</style>
-            <div className="preloader-container">
-                <svg className="background-canvas" viewBox="0 0 450 600" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                        <filter id="node-glow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                            <feMerge>
-                                <feMergeNode in="coloredBlur" />
-                                <feMergeNode in="SourceGraphic" />
-                            </feMerge>
-                        </filter>
-                    </defs>
-                    
-                    {/* Render Lines */}
-                    {mainLines}
-                    
-                    {/* Render Stars */}
-                    {constellationData.nodes.map((node, index) => (
-                        <circle
-                            key={node.id}
-                            id={node.id}
-                            className="star-node"
-                            cx={node.cx}
-                            cy={node.cy}
-                            r={node.r}
-                            fill="#042940"
-                            filter="url(#node-glow)"
-                            style={{ animationDelay: `${index * 0.15}s, ${index * 0.2}s` }}
-                        />
-                    ))}
-                </svg>
-
-                <div className="content-overlay">
-                    <img 
-                        src="https://i.postimg.cc/TYmLPPGk/Generated-Image-October-17-2025-12-49-AM-2.png"
-                        alt="Orion ERP Logo"
-                        className="w-full mx-auto mb-8 drop-shadow-[0_0_25px_rgba(4,41,64,0.6)]"
-                    />
-                    <div className="flex items-center justify-center gap-4 text-[#042940]">
-                        <GearIcon className="w-10 h-10 animate-spin" style={{ animationDuration: '3s' }}/>
-                        <span className="text-3xl font-bold tabular-nums">{progress}%</span>
-                    </div>
-                </div>
-            </div>
-        </>
+        <PreloaderContainer>
+            <Canvas ref={canvasRef} />
+            <Logo 
+                src="https://i.postimg.cc/TYmLPPGk/Generated-Image-October-17-2025-12-49-AM-2.png"
+                alt="Cargando Orion ERP"
+            />
+            <LoadingContainer>
+                <PercentageText>{percentage}%</PercentageText>
+                <SpinningGear>
+                    <GearIcon />
+                </SpinningGear>
+            </LoadingContainer>
+        </PreloaderContainer>
     );
 };
 

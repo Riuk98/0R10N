@@ -45,7 +45,7 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
 
                 {/* Client Info */}
                 <div className="p-4 border-b border-x border-gray-300 dark:border-gray-600">
-                    <div className="grid grid-cols-3 gap-x-6 gap-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3">
                         <div className="flex items-center gap-2">
                             <label className="font-semibold w-32 shrink-0">Fecha de emisión:</label>
                             <input type="text" readOnly value={formatDate()} className="factura-input flex-grow" />
@@ -59,7 +59,7 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
                             <input type="text" readOnly value={formatDate()} className="factura-input flex-grow" />
                         </div>
 
-                        <div className="col-span-2">
+                        <div className="md:col-span-2">
                             <label className="font-semibold block mb-1">Nombre/Razón Social:</label>
                             <input type="text" readOnly value={order?.clientName || ''} className="factura-input w-full" />
                         </div>
@@ -81,12 +81,12 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
                             <input type="text" readOnly value={order?.clientEmail || ''} className="factura-input w-full" />
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 md:col-span-1">
                              <label className="font-semibold">Tipo de pago:</label>
                              <label className="flex items-center gap-1"><input type="checkbox" checked={order?.paymentMethod?.toLowerCase().includes('crédito')} readOnly /> Crédito</label>
                              <label className="flex items-center gap-1"><input type="checkbox" checked={!order?.paymentMethod?.toLowerCase().includes('crédito')} readOnly /> Contado</label>
                         </div>
-                         <div className="col-span-2">
+                         <div className="md:col-span-2">
                             <label className="font-semibold block mb-1">Orden de Pedido:</label>
                             <input type="text" readOnly value={order?.id || ''} className="factura-input w-full" />
                         </div>
@@ -95,41 +95,43 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
 
                 {/* Items Table */}
                 <div className="flex-grow overflow-auto border-x border-gray-300 dark:border-gray-600">
-                    <table className="w-full factura-table">
-                        <thead>
-                            <tr>
-                                <th className="w-16">Sec.</th>
-                                <th>Producto</th>
-                                <th>Descripción</th>
-                                <th className="w-20">Cant.</th>
-                                <th className="w-32">Valor Unitario</th>
-                                <th className="w-32">Valor Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {order?.items.map((item: any, index: number) => (
-                                <tr key={index}>
-                                    <td className="text-center">{index + 1}</td>
-                                    <td>{item.productId}</td>
-                                    <td>{item.productName}</td>
-                                    <td className="text-center">{item.quantity}</td>
-                                    <td className="text-right">${item.unitPrice.toLocaleString('es-CO')}</td>
-                                    <td className="text-right">${item.totalPrice.toLocaleString('es-CO')}</td>
+                    <div className="overflow-x-auto">
+                        <table className="w-full factura-table min-w-[800px]">
+                            <thead>
+                                <tr>
+                                    <th className="w-16">Sec.</th>
+                                    <th>Producto</th>
+                                    <th>Descripción</th>
+                                    <th className="w-20">Cant.</th>
+                                    <th className="w-32">Valor Unitario</th>
+                                    <th className="w-32">Valor Total</th>
                                 </tr>
-                            ))}
-                            {/* Add empty rows to fill space */}
-                            {Array.from({ length: Math.max(0, 5 - (order?.items?.length || 0)) }).map((_, i) => (
-                                <tr key={`empty-${i}`}><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {order?.items.map((item: any, index: number) => (
+                                    <tr key={index}>
+                                        <td className="text-center">{index + 1}</td>
+                                        <td>{item.productId}</td>
+                                        <td>{item.productName}</td>
+                                        <td className="text-center">{item.quantity}</td>
+                                        <td className="text-right">${item.unitPrice.toLocaleString('es-CO')}</td>
+                                        <td className="text-right">${item.totalPrice.toLocaleString('es-CO')}</td>
+                                    </tr>
+                                ))}
+                                {/* Add empty rows to fill space */}
+                                {Array.from({ length: Math.max(0, 5 - (order?.items?.length || 0)) }).map((_, i) => (
+                                    <tr key={`empty-${i}`}><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Footer and Totals */}
                 <div className="p-4 border-t border-x border-b border-gray-300 dark:border-gray-600 rounded-b-lg">
-                    <div className="grid grid-cols-3 gap-6">
-                        <div className="col-span-2">
-                            <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="font-semibold">ID Vendedor:</label>
                                     <input type="text" readOnly value={order?.sellerId || ''} className="factura-input w-full mt-1" />
@@ -138,7 +140,7 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
                                     <label className="font-semibold">Nombre Vendedor:</label>
                                     <input type="text" readOnly value={order?.sellerName || ''} className="factura-input w-full mt-1" />
                                 </div>
-                                <div className="col-span-2">
+                                <div className="col-span-1 sm:col-span-2">
                                     <label className="font-semibold">Observaciones:</label>
                                     <input type="text" readOnly value={order?.observations || ''} className="factura-input w-full mt-1" />
                                 </div>

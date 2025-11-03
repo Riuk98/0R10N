@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Switch from './Switch'; // Import the new Switch component
 
@@ -67,7 +66,6 @@ const Icons = {
     Operations: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>),
     Admin: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>),
     ArrowLeft: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>),
-    // FIX: Corrected typo in viewBox attribute from "0 0 24" 24" to "0 0 24 24".
     Trash: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>),
     Close: (props: React.SVGProps<SVGSVGElement>) => (
         <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -633,7 +631,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 body.dark-mode .erp-container ::-webkit-scrollbar-thumb:hover {
                     background-color: #718096; /* Lighter thumb on hover */
                 }
-                .top-bar { position: fixed; top: 0; left: 0; width: 100%; height: var(--topbar-height); background-color: var(--header-window-bg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1000; border-bottom: 1px solid var(--border-color); transition: background-color 0.3s, border-color 0.3s; }
+                .top-bar { position: fixed; top: 0; left: 0; width: 100%; height: var(--topbar-height); background-color: var(--header-window-bg); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1101; border-bottom: 1px solid var(--border-color); transition: background-color 0.3s, border-color 0.3s; }
                 .menu-toggle-container { position: absolute; left: 15px; }
                 #menu-toggle { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 1em; cursor: pointer; display: flex; align-items: center; gap: 3px; padding: 5px 10px; border-radius: 5px; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
                 #menu-toggle:hover { background-color: var(--bg-main); opacity: 0.8; }
@@ -727,19 +725,74 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 .confirmation-modal-buttons button:hover { opacity: 0.8; }
                 .confirm-btn { background-color: #d9534f; color: white; }
                 .cancel-btn { background-color: var(--border-color); color: var(--text-primary); }
+                
                 @media (max-width: 768px) {
                     body:not(.sidebar-force-open) .sidebar { transform: translateX(calc(-1 * var(--sidebar-width))); }
                     body.sidebar-force-open .sidebar { transform: translateX(0); z-index: 1100; }
                     .main-content { margin-left: 0; width: 100%; }
-                    .minimized-bar { left: 0; }
-                    .internal-window { width: 95% !important; height: 80% !important; top: 5% !important; left: 2.5% !important; }
+                    
+                    /* Make windows take over the screen */
+                    .internal-window {
+                        top: var(--topbar-height) !important;
+                        left: 0 !important;
+                        width: 100% !important;
+                        height: calc(100vh - var(--topbar-height)) !important;
+                        border-radius: 0 !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        resize: none !important;
+                        z-index: 1050; /* Below sidebar but above content */
+                    }
+                    .window-header { cursor: default; } /* No moving on mobile */
+                    .internal-window.maximized {
+                        box-shadow: none !important;
+                    }
+
+                    /* Make minimized bar scrollable */
+                    .minimized-bar {
+                        left: 0;
+                        width: 100%;
+                        overflow-x: auto;
+                        white-space: nowrap;
+                        padding-bottom: 5px; /* for scrollbar */
+                        -webkit-overflow-scrolling: touch; /* Momentum scrolling on iOS */
+                    }
+                    .minimized-bar::-webkit-scrollbar {
+                        height: 5px;
+                    }
+                    .minimized-bar::-webkit-scrollbar-thumb {
+                        background-color: var(--secondary-green);
+                        border-radius: 10px;
+                    }
+                    
+                    /* Sidebar overlay */
+                    .sidebar-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background-color: rgba(0,0,0,0.5);
+                        z-index: 1099; /* Below sidebar */
+                        opacity: 0;
+                        visibility: hidden;
+                        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+                    }
+                    body.sidebar-force-open .sidebar-overlay {
+                        opacity: 1;
+                        visibility: visible;
+                    }
+
                     #datetime-container { display: none; }
                     .user-name { display: none; }
                     #menu-toggle span { display: none; }
-                    .sidebar-footer { display: none; }
                     body.sidebar-partially-collapsed { --sidebar-width: 190px; }
+                    body.sidebar-force-open.sidebar-partially-collapsed .sidebar {
+                        width: var(--sidebar-width-collapsed);
+                    }
                 }
            `}</style>
+            {isSidebarForceOpen && <div className="sidebar-overlay" onClick={toggleSidebar}></div>}
             <header className="top-bar">
                 <div className="menu-toggle-container">
                     <button id="menu-toggle" onClick={toggleSidebar}>

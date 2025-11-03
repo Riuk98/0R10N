@@ -1,9 +1,10 @@
 
+
 import React from 'react';
 
 // --- ICONS ---
 const CloudDownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
         <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -11,7 +12,7 @@ const CloudDownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const RefreshIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="23 4 23 10 17 10"></polyline>
         <polyline points="1 20 1 14 7 14"></polyline>
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
@@ -149,6 +150,22 @@ const CuentasCobrar: React.FC = () => {
                     border: 1px solid var(--border-color);
                     border-radius: 0.25rem;
                     padding: 0.25rem;
+                }
+                @media (max-width: 768px) {
+                    .cxc-filters {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 1rem;
+                    }
+                    .cxc-left-filters {
+                        flex-wrap: wrap;
+                        gap: 1rem;
+                        justify-content: center;
+                    }
+                    .cxc-footer {
+                        flex-direction: column;
+                        gap: 0.5rem;
+                    }
                 }
             `}</style>
             <div className="cxc-container">

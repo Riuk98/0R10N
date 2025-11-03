@@ -1,11 +1,13 @@
+
+
 import React, { useState } from 'react';
 
 // --- ICONS ---
 const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
 );
 const SuccessIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
@@ -60,7 +62,6 @@ const CrearTicket: React.FC<CrearTicketProps> = ({ onClose }) => {
     };
     
     const handleTypeSelect = (type: ContactType) => {
-        // FIX: Correctly update the 'tipo' property in the form state.
         setFormData(prev => ({ ...prev, tipo: type }));
         if(errors.tipo) setErrors({...errors, tipo: null});
     }
@@ -178,7 +179,7 @@ const CrearTicket: React.FC<CrearTicketProps> = ({ onClose }) => {
             )}
             <div className="flex justify-between items-start">
                 <div className="flex-grow p-4 border border-[var(--border-color)] rounded-2xl mr-4 bg-[var(--bg-main)]/50">
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                         <InputField label="Nombre/Razón Social" name="nombre" value={formData.nombre} onChange={handleChange} />
                         <InputField label="NIT" name="nit" value={formData.nit} onChange={handleChange} />
                         <InputField label="Dirección" name="direccion" value={formData.direccion} onChange={handleChange} />
@@ -193,7 +194,7 @@ const CrearTicket: React.FC<CrearTicketProps> = ({ onClose }) => {
 
             <div className="p-4 border border-[var(--border-color)] rounded-2xl bg-[var(--bg-main)]/50">
                 <h3 className="text-md font-semibold text-[var(--text-primary)] mb-3">Tipo de Contacto</h3>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {contactTypes.map(({ id, label }) => (
                         <button
                             key={id} type="button" onClick={() => handleTypeSelect(id)}

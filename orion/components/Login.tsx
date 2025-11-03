@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { INTERNAL_USERS, OrionUser } from '../data/internalUsers';
 
@@ -88,7 +89,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <>
             <div
                 ref={backgroundRef}
-                className="h-screen w-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#fffafa] to-[#018B9F] relative overflow-hidden"
+                className="h-screen w-screen flex items-center justify-center p-4 bg-gradient-to-br from-sky-100 to-sky-500 relative overflow-hidden"
             >
 
                 <div className="w-full max-w-xs z-10" onClick={(e) => e.stopPropagation()}>

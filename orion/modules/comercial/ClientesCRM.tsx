@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 
 // --- ICONS ---
@@ -36,7 +37,7 @@ const PrintIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const CancelIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
@@ -50,7 +51,7 @@ const ViewIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
         <polyline points="7 10 12 15 17 10"></polyline>
         <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -387,7 +388,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions }) => {
                 </div>
             )}
             {/* Top section: Client Info + Actions */}
-            <div className="flex gap-4">
+            <div className="flex flex-col lg:flex-row gap-4">
                 {/* Info Form */}
                 <div className="flex-grow p-4 border border-[var(--border-color)] rounded-2xl bg-[var(--bg-main)]/50">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
@@ -400,7 +401,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions }) => {
                     </div>
                 </div>
                 {/* Action Buttons */}
-                <div className="flex flex-col space-y-3">
+                <div className="flex flex-row flex-wrap justify-center lg:flex-col lg:space-y-3 gap-3">
                     <ActionButton title="Buscar Cliente" onClick={handleSearch} icon={<SearchIcon className="w-5 h-5" />} />
                     <ActionButton title="Nuevo Pedido" onClick={handleCreatePedido} icon={<CartIcon className="w-5 h-5" />} disabled={!permissions?.crear} />
                     <ActionButton title="Registrar Cliente" onClick={handleRegister} icon={<DocumentIcon className="w-5 h-5" />} disabled={!permissions?.crear} />

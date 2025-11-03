@@ -14,13 +14,13 @@ interface RegistroUsuarioProps {
 
 // --- ICONS ---
 const SuccessIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
 
 const PadlockIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
     </svg>
 );
@@ -134,6 +134,7 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                 const updatedUser: OrionUser = {
                     ...userToEdit,
                     ...formData,
+                    username: formData.usuario
                 };
                 onUpdateSuccess(updatedUser);
                 setIsSubmitted(true); // Show success screen on update as well
@@ -333,13 +334,12 @@ const RegistroUsuario: React.FC<RegistroUsuarioProps> = ({ onRegisterSuccess, on
                                     <option value="Temporal">Temporal</option>
                                 </select>
                                 <label htmlFor="fechaTerminacion">Fecha de Terminacion:</label>
-                                {/* FIX: Corrected typo in 'name' attribute and bound the value to the correct state property. */}
-                                <input type="date" id="fechaTerminacion" name="fechaTerminacion" value={formData.fechaTerminacion} onChange={handleChange} />
+                                <input type="date" id="fechaTerminacion" name="fechaTerminacion" value={formData.fechaTerminacion || ''} onChange={handleChange} />
                             </fieldset>
                             <fieldset>
                                 <legend>Datos de Acceso</legend>
                                 <label htmlFor="usuario">Usuario (autogenerado):</label>
-                                <input type="text" id="usuario" name="usuario" value={formData.usuario} required readOnly={isEditMode} />
+                                <input type="text" id="usuario" name="usuario" value={formData.usuario} onChange={handleChange} required readOnly={!isEditMode} />
                                 {errors.usuario && <p className="error-text">{errors.usuario}</p>}
                                 <label htmlFor="password">Contraseña:</label>
                                 <input type="password" id="password" name="password" value={formData.password} onChange={handleChange} required />

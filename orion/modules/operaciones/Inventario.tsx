@@ -187,7 +187,7 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
             `}</style>
 
             {/* Combined Header for alignment */}
-            <div className="px-4 pt-2 flex justify-between items-start">
+            <div className="px-4 pt-2 flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                 {/* Tabs */}
                 <div className="flex">
                     <button 
@@ -205,11 +205,11 @@ const Inventario: React.FC<InventarioProps> = ({ permissions }) => {
                 </div>
                 
                 {/* Search Bar */}
-                <div className="flex items-center">
+                <div className="flex items-center w-full md:w-auto">
                     <input 
                         type="text" 
                         placeholder="Nombre de cliente, c. pedido, telefono o correo"
-                        className="bg-[var(--bg-main)] border border-[var(--border-color)] rounded-l p-1.5 text-sm w-80 focus:ring-2 focus:ring-[var(--secondary-green)] outline-none text-[var(--text-primary)]"
+                        className="bg-[var(--bg-main)] border border-[var(--border-color)] rounded-l p-1.5 text-sm w-full md:w-80 focus:ring-2 focus:ring-[var(--secondary-green)] outline-none text-[var(--text-primary)]"
                     />
                     <button 
                         onClick={handleSearch}
