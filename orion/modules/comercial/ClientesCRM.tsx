@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+
+
+import React, { useState, useEffect, useMemo } from 'react';
 
 // --- ICONS ---
 const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -41,6 +43,17 @@ const CancelIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
+const ListIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6"></line>
+        <line x1="8" y1="12" x2="21" y2="12"></line>
+        <line x1="8" y1="18" x2="21" y2="18"></line>
+        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+    </svg>
+);
+
 
 // --- TYPE DEFINITIONS ---
 export interface Tercero {
@@ -52,6 +65,7 @@ export interface Tercero {
     email: string;
     tipoPago: string;
     tipo: 'Cliente' | 'Proveedor' | 'Ambos';
+    status: 'Activo' | 'Inactivo';
 }
 
 interface Ticket {
@@ -110,6 +124,80 @@ const ActionButton = ({ icon, title, onClick, disabled }: { icon: React.ReactNod
     </button>
 );
 
+// --- Modal for Listing Terceros ---
+const TercerosListModal = ({ isOpen, onClose, onSelect, terceros }: { isOpen: boolean, onClose: () => void, onSelect: (tercero: Tercero) => void, terceros: Tercero[] }) => {
+    if (!isOpen) return null;
+
+    const [typeFilter, setTypeFilter] = useState('Todos');
+    const [statusFilter, setStatusFilter] = useState('Todos');
+
+    const filteredTerceros = useMemo(() => {
+        return terceros.filter(t => {
+            const typeMatch = typeFilter === 'Todos' || t.tipo === typeFilter;
+            const statusMatch = statusFilter === 'Todos' || t.status === statusFilter;
+            return typeMatch && statusMatch;
+        });
+    }, [terceros, typeFilter, statusFilter]);
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[1050] flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-[var(--bg-card)] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b border-[var(--border-color)]">
+                    <h3 className="text-lg font-bold">Listado de Terceros</h3>
+                </div>
+                <div className="p-4 flex flex-wrap gap-4 items-center bg-[var(--bg-main)]/50">
+                    <div>
+                        <label className="text-sm font-medium mr-2">Filtrar por Tipo:</label>
+                        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="p-2 border rounded-md bg-[var(--bg-main)]">
+                            <option>Todos</option><option>Cliente</option><option>Proveedor</option><option>Ambos</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label className="text-sm font-medium mr-2">Filtrar por Estado:</label>
+                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="p-2 border rounded-md bg-[var(--bg-main)]">
+                            <option>Todos</option><option>Activo</option><option>Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div className="flex-grow overflow-y-auto">
+                     <table className="w-full text-sm">
+                        <thead className="bg-[var(--bg-main)] sticky top-0">
+                            <tr>
+                                <th className="p-3 text-left">NIT</th>
+                                <th className="p-3 text-left">Nombre</th>
+                                <th className="p-3 text-left">Tipo</th>
+                                <th className="p-3 text-center">Estado</th>
+                                <th className="p-3 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredTerceros.map(t => (
+                                <tr key={t.id} className="border-t border-[var(--border-color)] hover:bg-[var(--bg-main)]/50">
+                                    <td className="p-3">{t.nit}</td>
+                                    <td className="p-3">{t.nombre}</td>
+                                    <td className="p-3">{t.tipo}</td>
+                                    <td className="p-3 text-center">
+                                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${t.status === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                            {t.status}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                        <button onClick={() => onSelect(t)} className="px-3 py-1 bg-[var(--secondary-green)] text-white text-xs font-bold rounded-md hover:opacity-80">Seleccionar</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="p-4 border-t border-[var(--border-color)] text-right">
+                    <button onClick={onClose} className="px-4 py-2 bg-[var(--bg-main)] rounded-md hover:opacity-80">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave }) => {
     const [activeTab, setActiveTab] = useState('movimientos');
     const [formData, setFormData] = useState<FormData>({
@@ -119,6 +207,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [allTickets, setAllTickets] = useState<Ticket[]>([]);
     const [customerTickets, setCustomerTickets] = useState<Ticket[]>([]);
+    const [isListModalOpen, setIsListModalOpen] = useState(false);
 
 
     useEffect(() => {
@@ -234,7 +323,8 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
             tipo,
             direccion: formData.direccion,
             telefono: formData.telefono,
-            tipoPago: formData.tipoPago
+            tipoPago: formData.tipoPago,
+            status: 'Activo', // Default status
         };
 
         onSave(newTercero);
@@ -269,6 +359,25 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
             detail: detailPayload
         }));
     };
+    
+    const handleSelectTerceroFromList = (tercero: Tercero) => {
+        setFormData({
+            nombre: tercero.nombre,
+            nit: tercero.nit || '',
+            direccion: tercero.direccion || '',
+            telefono: tercero.telefono || '',
+            email: tercero.email || '',
+            tipoPago: tercero.tipoPago || '',
+            esCliente: tercero.tipo === 'Cliente' || tercero.tipo === 'Ambos',
+            esProveedor: tercero.tipo === 'Proveedor' || tercero.tipo === 'Ambos',
+        });
+        const ticketsForCustomer = allTickets.filter(
+            ticket => ticket.cliente.toLowerCase() === tercero.nombre.toLowerCase()
+        );
+        setCustomerTickets(ticketsForCustomer);
+        setIsListModalOpen(false);
+        showNotification(`${tercero.nombre} seleccionado.`, 'success');
+    };
 
     const getStatusClass = (status: Ticket['estado']) => {
         switch (status) {
@@ -283,6 +392,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
     
     return (
         <div className="p-2 space-y-4 h-full flex flex-col text-[var(--text-primary)]">
+            <TercerosListModal isOpen={isListModalOpen} onClose={() => setIsListModalOpen(false)} onSelect={handleSelectTerceroFromList} terceros={terceros} />
             {notification && (
                  <div className={`p-2 mb-2 text-sm rounded-md text-center ${notification.type === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'}`}>
                     {notification.message}
@@ -327,6 +437,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
                     </div>
                 </div>
                 <div className="flex flex-row flex-wrap justify-center lg:flex-col lg:space-y-3 gap-3">
+                    <ActionButton title="Listar Terceros" onClick={() => setIsListModalOpen(true)} icon={<ListIcon className="w-5 h-5" />} />
                     <ActionButton title="Buscar Tercero" onClick={handleSearch} icon={<SearchIcon className="w-5 h-5" />} />
                     <ActionButton title="Nuevo Pedido" onClick={handleCreatePedido} icon={<CartIcon className="w-5 h-5" />} disabled={!permissions?.crear} />
                     <ActionButton title="Guardar Tercero" onClick={handleRegister} icon={<DocumentIcon className="w-5 h-5" />} disabled={!permissions?.crear} />

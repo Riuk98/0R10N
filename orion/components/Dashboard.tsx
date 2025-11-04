@@ -1,7 +1,10 @@
 
 
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+
+
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Switch from './Switch'; // Import the new Switch component
 
 // --- TYPE DEFINITIONS ---
@@ -45,6 +48,7 @@ import GestionPermisos from '../modules/administracion/GestionPermisos';
 import { OrionUser, INTERNAL_USERS } from '../data/internalUsers';
 import { defaultPermissionsByRole } from '../data/permissions';
 import { initialProducts, initialInsumos } from '../data/inventoryData';
+import { initialTerceros } from '../data/tercerosData';
 
 
 // --- SVG ICONS (as React components for easier use) ---
@@ -183,6 +187,7 @@ const Window: React.FC<{
     terceros: Tercero[];
     onSaveTercero: (tercero: Tercero) => void;
     proveedores: Tercero[];
+    clientes: Tercero[];
 }> = ({ win, onClose, onMinimize, onFocus, onUpdate, isFocused, onAnimationEnd, permissions, ...rest }) => {
     
     const headerRef = useRef<HTMLDivElement>(null);
@@ -382,55 +387,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             }
         } catch (error) { console.error("Failed to manage Orion insumos", error); setOrionInsumos(initialInsumos); }
 
-        // Load or Migrate Terceros (Clients & Suppliers)
+        // Load Terceros
         try {
             const storedTercerosRaw = localStorage.getItem(TERCEROS_STORAGE_KEY);
             if (storedTercerosRaw) {
                 setTerceros(JSON.parse(storedTercerosRaw));
             } else {
-                // Migration needed
-                const clientesRaw = localStorage.getItem('hatoGrandeClientes');
-                const proveedoresRaw = localStorage.getItem('orionProveedores');
-                const clientes = clientesRaw ? JSON.parse(clientesRaw) : [];
-                const proveedores = proveedoresRaw ? JSON.parse(proveedoresRaw) : [];
-                const tercerosMap = new Map<string, Tercero>();
-
-                clientes.forEach((c: any) => {
-                    const id = (c.nit || c.email || `${c.firstName}${c.lastName}`).toString();
-                    tercerosMap.set(id, {
-                        id,
-                        nombre: `${c.firstName} ${c.lastName}`,
-                        nit: c.nit || '',
-                        direccion: c.direccion || '',
-                        telefono: c.phone || '',
-                        email: c.email,
-                        tipoPago: c.tipoPago || 'Contado',
-                        tipo: 'Cliente',
-                    });
-                });
-
-                proveedores.forEach((p: any) => {
-                    const id = (p.nit || p.email || p.nombre).toString();
-                    if (tercerosMap.has(id)) {
-                        const existing = tercerosMap.get(id)!;
-                        existing.tipo = 'Ambos';
-                        existing.nombre = existing.nombre || p.nombre;
-                        existing.direccion = existing.direccion || p.direccion;
-                    } else {
-                        tercerosMap.set(id, {
-                            id: p.id.toString(),
-                            nombre: p.nombre, nit: p.nit, direccion: p.direccion, telefono: p.telefono,
-                            email: p.email, tipoPago: p.tipoPago, tipo: 'Proveedor',
-                        });
-                    }
-                });
-
-                const newTerceros = Array.from(tercerosMap.values());
-                setTerceros(newTerceros);
-                localStorage.setItem(TERCEROS_STORAGE_KEY, JSON.stringify(newTerceros));
+                // No data found, initialize with default set
+                setTerceros(initialTerceros);
+                localStorage.setItem(TERCEROS_STORAGE_KEY, JSON.stringify(initialTerceros));
             }
         } catch (error) {
             console.error("Error managing terceros data", error);
+            setTerceros(initialTerceros); // fallback
         }
 
     }, []);
@@ -690,7 +659,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         })
     })).filter(pillar => pillar.items.length > 0);
     
-    const proveedores = terceros.filter(t => t.tipo === 'Proveedor' || t.tipo === 'Ambos');
+    const proveedores = useMemo(() => terceros.filter(t => t.tipo === 'Proveedor' || t.tipo === 'Ambos'), [terceros]);
+    const clientes = useMemo(() => terceros.filter(t => t.tipo === 'Cliente' || t.tipo === 'Ambos'), [terceros]);
 
     return (
         <div className={`erp-container`}>
@@ -1017,6 +987,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                                 terceros={terceros}
                                 onSaveTercero={handleSaveTercero}
                                 proveedores={proveedores}
+                                clientes={clientes}
                             />
                         );
                     })}

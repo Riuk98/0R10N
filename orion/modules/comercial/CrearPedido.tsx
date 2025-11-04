@@ -1,6 +1,8 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { products as productList } from '../../../hatogrande/data';
+import { Tercero } from './ClientesCRM';
 
 // --- ICONS ---
 const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -31,6 +33,7 @@ interface CrearPedidoProps {
     permissions?: Record<string, boolean>;
     orderToEdit?: any;
     clientData?: any;
+    clientes?: Tercero[];
 }
 
 interface OrderItem {
@@ -74,11 +77,71 @@ const ActionButton = ({ icon, title, onClick, disabled }: { icon: React.ReactNod
     </button>
 );
 
-const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderToEdit, clientData }) => {
+const ClientSearchModal = ({ isOpen, onClose, onSelect, clientes }: { isOpen: boolean, onClose: () => void, onSelect: (cliente: Tercero) => void, clientes: Tercero[] }) => {
+    if (!isOpen) return null;
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredClients = useMemo(() => {
+        if (!searchTerm) return clientes;
+        const lowercasedFilter = searchTerm.toLowerCase();
+        return clientes.filter(c => 
+            c.nombre.toLowerCase().includes(lowercasedFilter) || 
+            c.nit.includes(lowercasedFilter)
+        );
+    }, [clientes, searchTerm]);
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[1050] flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-[var(--bg-card)] rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b border-[var(--border-color)]">
+                    <h3 className="text-lg font-bold">Buscar Cliente</h3>
+                </div>
+                <div className="p-4">
+                    <input 
+                        type="text"
+                        placeholder="Buscar por nombre o NIT..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--secondary-green)]"
+                    />
+                </div>
+                <div className="flex-grow overflow-y-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-[var(--bg-main)] sticky top-0">
+                            <tr>
+                                <th className="p-3 text-left">NIT</th>
+                                <th className="p-3 text-left">Nombre</th>
+                                <th className="p-3 text-left">Teléfono</th>
+                                <th className="p-3 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredClients.map(c => (
+                                <tr key={c.id} className="border-t border-[var(--border-color)] hover:bg-[var(--bg-main)]/50">
+                                    <td className="p-3">{c.nit}</td>
+                                    <td className="p-3">{c.nombre}</td>
+                                    <td className="p-3">{c.telefono}</td>
+                                    <td className="p-3 text-center">
+                                        <button onClick={() => onSelect(c)} className="px-3 py-1 bg-[var(--secondary-green)] text-white text-xs font-bold rounded-md hover:opacity-80">Seleccionar</button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="p-4 border-t border-[var(--border-color)] text-right">
+                    <button onClick={onClose} className="px-4 py-2 bg-[var(--bg-main)] rounded-md hover:opacity-80">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderToEdit, clientData, clientes = [] }) => {
     const isEditMode = !!orderToEdit;
     const [orderId, setOrderId] = useState('');
     const [client, setClient] = useState({ nombre: '', nit: '', direccion: '', telefono: '', email: '' });
-    const [searchError, setSearchError] = useState<string | null>(null);
+    const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
     const [deliveryDate, setDeliveryDate] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
@@ -96,7 +159,6 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
 
     const resetForm = useCallback(() => {
         setClient({ nombre: '', nit: '', direccion: '', telefono: '', email: '' });
-        setSearchError(null);
         setOrderDate(new Date().toISOString().split('T')[0]);
         setDeliveryDate('');
         setPaymentMethod('');
@@ -156,46 +218,25 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
         setTotals({ bruto, descuento, neto: bruto - descuento });
     }, [items]);
 
-    const handleClientSearch = () => {
-        const nombreBusqueda = client.nombre.trim();
-        const nitBusqueda = client.nit.trim();
-
-        if (!nombreBusqueda && !nitBusqueda) {
-            setSearchError('Debe ingresar un Nombre/Razón Social o NIT para buscar.');
-            return;
-        }
-
-        const storedUsers = JSON.parse(localStorage.getItem('hatoGrandeClientes') || '[]');
-        const foundUser = storedUsers.find((u: any) => {
-            const fullName = `${u.firstName} ${u.lastName}`.toLowerCase();
-            const searchName = nombreBusqueda.toLowerCase();
-            
-            const nameMatch = nombreBusqueda && fullName.includes(searchName);
-            const nitMatch = nitBusqueda && u.nit === nitBusqueda;
-
-            return nameMatch || nitMatch;
-        });
-        
-        if (foundUser) {
-            setClient({
-                nombre: `${foundUser.firstName} ${foundUser.lastName}`,
-                nit: foundUser.nit || '',
-                direccion: foundUser.direccion || '',
-                telefono: foundUser.phone,
-                email: foundUser.email,
-            });
-            setSearchError(null);
-        } else {
-            setSearchError('La información no coincide con ningún cliente existente.');
-        }
-    };
-
     const handleClientChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setClient(c => ({...c, [name]: value}));
-        if (searchError && (name === 'nombre' || name === 'nit')) {
-            setSearchError(null);
+        let processedValue = value;
+        if (name === 'nit') {
+            processedValue = value.replace(/[^0-9]/g, '');
         }
+        setClient(c => ({...c, [name]: processedValue}));
+    };
+
+    const handleSelectClient = (selectedClient: Tercero) => {
+        setClient({
+            nombre: selectedClient.nombre,
+            nit: selectedClient.nit,
+            direccion: selectedClient.direccion,
+            telefono: selectedClient.telefono,
+            email: selectedClient.email,
+        });
+        setPaymentMethod(selectedClient.tipoPago);
+        setIsClientModalOpen(false);
     };
 
     const handleProductSearch = (productId: string) => {
@@ -343,30 +384,39 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
 
     return (
         <div className="flex flex-col h-full bg-[var(--bg-card)] text-[var(--text-primary)]">
+            <ClientSearchModal isOpen={isClientModalOpen} onClose={() => setIsClientModalOpen(false)} onSelect={handleSelectClient} clientes={clientes || []} />
             <div className="p-4 space-y-3 overflow-y-auto flex-grow">
-                 {searchError && (
-                    <div className="w-full text-center p-3 bg-red-100 text-red-800 text-sm rounded-lg border border-red-200 dark:bg-red-900/30 dark:text-red-200 dark:border-red-700">
-                        {searchError}
-                    </div>
-                )}
                 <div className="flex justify-between items-start">
                     <div className="flex-grow p-4 border border-[var(--border-color)] rounded-2xl mr-4 bg-[var(--bg-main)]/50">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                            <InputField label="Fecha" name="orderDate" value={orderDate} onChange={(e) => setOrderDate(e.target.value)}/>
-                            <InputField label="Fecha de entrega" name="deliveryDate" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} />
+                            <div>
+                                <label className="text-sm font-medium text-[var(--text-secondary)] mb-1 block">Fecha</label>
+                                <input type="date" name="orderDate" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)]"/>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-[var(--text-secondary)] mb-1 block">Fecha de entrega</label>
+                                <input type="date" name="deliveryDate" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)]"/>
+                            </div>
                             <InputField label="Nombre/Razón Social" name="nombre" value={client.nombre} onChange={handleClientChange} className="col-span-2" />
                             <InputField label="NIT" name="nit" value={client.nit} onChange={handleClientChange} />
                             <InputField label="Dirección" name="direccion" value={client.direccion} onChange={(e) => setClient(c => ({...c, direccion: e.target.value}))} />
                             <InputField label="Teléfono" name="telefono" value={client.telefono} onChange={(e) => setClient(c => ({...c, telefono: e.target.value}))} />
                             <InputField label="E-mail" name="email" value={client.email} onChange={(e) => setClient(c => ({...c, email: e.target.value}))} />
-                            <InputField label="Tipo de pago" name="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} />
+                            <div>
+                                <label className="text-sm font-medium text-[var(--text-secondary)] mb-1 block">Tipo de pago</label>
+                                <select name="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)] h-[34px]">
+                                    <option value="">Seleccione...</option>
+                                    <option value="Contado">Contado</option>
+                                    <option value="Crédito">Crédito</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div className="flex flex-col space-y-2 items-center">
                          <div className="px-4 py-2 bg-[var(--bg-main)] border border-[var(--border-color)] rounded-lg text-lg font-bold">
                             {orderId}
                         </div>
-                        <ActionButton icon={<SearchIcon className="w-6 h-6" />} title="Buscar Cliente" onClick={handleClientSearch}/>
+                        <ActionButton icon={<SearchIcon className="w-6 h-6" />} title="Buscar Cliente" onClick={() => setIsClientModalOpen(true)}/>
                         <ActionButton icon={<RefreshIcon className="w-6 h-6" />} title="Limpiar Formulario" onClick={resetForm}/>
                     </div>
                 </div>
