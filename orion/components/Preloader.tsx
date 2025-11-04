@@ -220,7 +220,7 @@ const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
             <Canvas ref={canvasRef} />
             <Logo 
                 src="https://i.postimg.cc/TYmLPPGk/Generated-Image-October-17-2025-12-49-AM-2.png"
-                alt="Cargando Orion ERR"
+                alt="Cargando Orion ERP"
             />
             <LoadingContainer>
                 <PercentageText>{percentage}%</PercentageText>
