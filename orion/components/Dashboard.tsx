@@ -28,11 +28,13 @@ import Facturacion from '../modules/comercial/Facturacion';
 
 import CuentasCobrar from '../modules/financiero/CuentasCobrar';
 import CuentasPagar from '../modules/financiero/CuentasPagar';
-import Contabilidad, { NuevoAsientoContableForm } from '../modules/financiero/Contabilidad';
+import Contabilidad, { AsientoContable, NuevoAsientoContableForm } from '../modules/financiero/Contabilidad';
 import Nomina from '../modules/financiero/Nomina';
+import DetalleCuenta from '../modules/financiero/DetalleCuenta';
+
 
 import Inventario, { OrionInsumo } from '../modules/operaciones/Inventario';
-import Compras, { OrdenCompraForm } from '../modules/operaciones/Compras';
+import Compras, { OrdenCompra, OrdenCompraForm } from '../modules/operaciones/Compras';
 import Produccion, { OrdenProduccionForm } from '../modules/operaciones/Produccion';
 import AnadirProducto from '../modules/operaciones/AnadirProducto';
 
@@ -149,6 +151,9 @@ const ModuleContent: React.FC<{
         case 'Nómina': return <Nomina />;
         case 'Nuevo Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
         case 'Editar Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
+        case 'Detalle Cuenta por Cobrar': return <DetalleCuenta cuenta={props.cuenta} tipo="cobrar" {...props} />;
+        case 'Detalle Cuenta por Pagar': return <DetalleCuenta cuenta={props.cuenta} tipo="pagar" {...props} />;
+
         
         case 'Inventario': return <Inventario permissions={permissions} products={orionProducts} insumos={orionInsumos} />;
         case 'Anadir Producto': return <AnadirProducto onClose={onClose} onAddProduct={props.onAddProduct} />;
@@ -196,6 +201,9 @@ const Window: React.FC<{
     onSaveTercero: (tercero: Tercero) => void;
     proveedores: Tercero[];
     clientes: Tercero[];
+    orionFacturas: any[];
+    orionOrdenesCompra: OrdenCompra[];
+    orionAsientosContables: AsientoContable[];
 }> = ({ win, onClose, onMinimize, onFocus, onUpdate, isFocused, onAnimationEnd, permissions, ...rest }) => {
     
     const headerRef = useRef<HTMLDivElement>(null);
@@ -274,7 +282,7 @@ const Window: React.FC<{
                     <button onClick={() => onClose(win.id)} title="Cerrar"><Icons.Close className="w-4 h-4" /></button>
                 </div>
             </div>
-            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') || win.title.includes('Ticket') || win.title.includes('Facturación') || win.title.includes('Producto') || win.title.includes('Orden') || win.title.includes('Asiento') ? 'no-padding' : ''}`}>
+            <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') || win.title.includes('Ticket') || win.title.includes('Facturación') || win.title.includes('Producto') || win.title.includes('Orden') || win.title.includes('Asiento') || win.title.includes('Detalle') ? 'no-padding' : ''}`}>
                  <ModuleContent title={win.title} onClose={() => onClose(win.id)} permissions={permissions} {...rest} {...win.props} winId={win.id} />
             </div>
         </div>
@@ -312,11 +320,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
     const [internalUsers, setInternalUsers] = useState<OrionUser[]>([]);
     const [orionInsumos, setOrionInsumos] = useState<OrionInsumo[]>([]);
     const [terceros, setTerceros] = useState<Tercero[]>([]);
+    const [orionFacturas, setOrionFacturas] = useState<any[]>([]);
+    const [orionOrdenesCompra, setOrionOrdenesCompra] = useState<OrdenCompra[]>([]);
+    const [orionAsientosContables, setOrionAsientosContables] = useState<AsientoContable[]>([]);
 
     
     const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
     const ORION_INSUMOS_STORAGE_KEY = 'orionInsumos';
     const TERCEROS_STORAGE_KEY = 'orionTerceros';
+    const ORION_FACTURAS_STORAGE_KEY = 'orionFacturas';
+    const ORION_ORDENES_COMPRA_STORAGE_KEY = 'orionOrdenesCompra';
+    const ORION_ASIENTOS_CONTABLES_STORAGE_KEY = 'orionAsientosContables';
+
 
 
     const [currentUser, setCurrentUser] = useState<OrionUser | null>(null);
@@ -402,6 +417,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
             console.error("Error managing terceros data", error);
             setTerceros(initialTerceros); // fallback
         }
+
+        // Load Facturas
+        try {
+            const storedFacturas = localStorage.getItem(ORION_FACTURAS_STORAGE_KEY);
+            setOrionFacturas(storedFacturas ? JSON.parse(storedFacturas) : []);
+        } catch (error) { console.error("Failed to manage Orion facturas", error); setOrionFacturas([]); }
+
+        // Load Ordenes de Compra
+        try {
+            const storedOrdenes = localStorage.getItem(ORION_ORDENES_COMPRA_STORAGE_KEY);
+            setOrionOrdenesCompra(storedOrdenes ? JSON.parse(storedOrdenes) : []);
+        } catch (error) { console.error("Failed to manage Orion ordenes de compra", error); setOrionOrdenesCompra([]); }
+
+        // Load Asientos Contables
+        try {
+            const storedAsientos = localStorage.getItem(ORION_ASIENTOS_CONTABLES_STORAGE_KEY);
+            setOrionAsientosContables(storedAsientos ? JSON.parse(storedAsientos) : []);
+        } catch (error) { console.error("Failed to manage Orion asientos contables", error); setOrionAsientosContables([]); }
+
 
     }, []);
 
@@ -1038,6 +1072,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
                                 onSaveTercero={handleSaveTercero}
                                 proveedores={proveedores}
                                 clientes={clientes}
+                                orionFacturas={orionFacturas}
+                                orionOrdenesCompra={orionOrdenesCompra}
+                                orionAsientosContables={orionAsientosContables}
                             />
                         );
                     })}

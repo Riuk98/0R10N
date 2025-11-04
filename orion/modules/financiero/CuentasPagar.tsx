@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
 // --- TYPE DEFINITION ---
-interface CuentaPorPagar {
+export interface CuentaPorPagar {
     id: string;
     ordenCompraId: string;
     proveedorId: string;
@@ -79,6 +79,15 @@ const CuentasPagar: React.FC = () => {
             c.ordenCompraId.toLowerCase().includes(lowercasedFilter)
         );
     }, [cuentas, searchTerm]);
+    
+    const handleViewDetails = (cuenta: CuentaPorPagar) => {
+        window.dispatchEvent(new CustomEvent('createOrionWindow', {
+            detail: {
+                title: 'Detalle Cuenta por Pagar',
+                props: { cuenta: cuenta }
+            }
+        }));
+    };
 
     const calculateDiasMora = (fechaVencimiento: string, saldo: number) => {
         if (saldo <= 0) return 0;
@@ -277,7 +286,7 @@ const CuentasPagar: React.FC = () => {
                                 const diasMora = calculateDiasMora(cuenta.fechaVencimiento, cuenta.saldo);
                                 const buckets = getAgingBucket(diasMora, cuenta.saldo);
                                 return (
-                                    <tr key={cuenta.id}>
+                                    <tr key={cuenta.id} onDoubleClick={() => handleViewDetails(cuenta)} className="cursor-pointer hover:bg-[var(--bg-main)]/50">
                                         <td>{cuenta.ordenCompraId}</td>
                                         <td>{cuenta.proveedorId}</td>
                                         <td>{cuenta.proveedorNombre}</td>
