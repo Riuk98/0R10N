@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 
 // --- ICONS ---
 const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
@@ -12,6 +13,46 @@ interface FacturacionProps {
 
 const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
     
+    const [descuento, setDescuento] = useState({ percentage: 0, value: 0 });
+    const [iva, setIva] = useState({ percentage: 0, value: 0 });
+    const [retencion, setRetencion] = useState({ percentage: 0, value: 0 });
+    const [total, setTotal] = useState(0);
+
+    const subtotal = order?.subtotal || 0;
+
+    // Initialize state from the passed order prop
+    useEffect(() => {
+        if (order) {
+            const initialDiscountValue = order.discount || 0;
+            const initialDiscountPercentage = subtotal > 0 ? parseFloat(((initialDiscountValue / subtotal) * 100).toFixed(2)) : 0;
+            setDescuento({ percentage: initialDiscountPercentage, value: initialDiscountValue });
+        }
+    }, [order, subtotal]);
+
+    // Recalculate everything when a percentage changes or subtotal changes
+    useEffect(() => {
+        const descuentoValue = subtotal * (descuento.percentage / 100);
+        const ivaValue = subtotal * (iva.percentage / 100);
+        const retencionValue = subtotal * (retencion.percentage / 100);
+
+        // This ensures the value in state is always in sync with the percentage
+        setDescuento(d => ({ ...d, value: descuentoValue }));
+        setIva(i => ({ ...i, value: ivaValue }));
+        setRetencion(r => ({ ...r, value: retencionValue }));
+
+        // Standard calculation: Subtotal - Discount + IVA - Withholding
+        setTotal(subtotal - descuentoValue + ivaValue - retencionValue);
+    }, [descuento.percentage, iva.percentage, retencion.percentage, subtotal]);
+
+    const handlePercentageChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+        setter: React.Dispatch<React.SetStateAction<{ percentage: number; value: number }>>
+    ) => {
+        // Allow floating point numbers, default to 0 if input is invalid
+        const percentage = parseFloat(e.target.value) || 0;
+        setter(prev => ({ ...prev, percentage }));
+    };
+
     const formatDate = (isoString?: string) => {
         if (!isoString) return new Date().toLocaleDateString('es-CO');
         return new Date(isoString).toLocaleDateString('es-CO');
@@ -149,23 +190,35 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
                                 <span className="factura-totals-label">Subtotal</span>
-                                <input type="text" readOnly value={`$ ${order?.subtotal.toLocaleString('es-CO') || '0'}`} className="factura-input w-40 text-right" />
+                                <input type="text" readOnly value={`$ ${subtotal.toLocaleString('es-CO')}`} className="factura-input w-40 text-right font-semibold" />
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="factura-totals-label">Descuento</span>
-                                <input type="text" readOnly value={`$ ${order?.discount.toLocaleString('es-CO') || '0'}`} className="factura-input w-40 text-right" />
+                            <div className="flex justify-between items-center gap-2">
+                                <label htmlFor="descuento-perc" className="factura-totals-label flex-1">Descuento</label>
+                                <div className="flex items-center gap-1">
+                                    <input id="descuento-perc" type="number" value={descuento.percentage} onChange={(e) => handlePercentageChange(e, setDescuento)} className="factura-input w-16 text-right" placeholder="%" step="0.01" />
+                                    <span className="font-semibold w-4 text-left">%</span>
+                                </div>
+                                <input type="text" readOnly value={`$ ${descuento.value.toLocaleString('es-CO')}`} className="factura-input w-32 text-right" />
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="factura-totals-label">IVA</span>
-                                <input type="text" readOnly value="$ 0" className="factura-input w-40 text-right" />
+                            <div className="flex justify-between items-center gap-2">
+                                <label htmlFor="iva-perc" className="factura-totals-label flex-1">IVA</label>
+                                <div className="flex items-center gap-1">
+                                    <input id="iva-perc" type="number" value={iva.percentage} onChange={(e) => handlePercentageChange(e, setIva)} className="factura-input w-16 text-right" placeholder="%" />
+                                    <span className="font-semibold w-4 text-left">%</span>
+                                </div>
+                                <input type="text" readOnly value={`$ ${iva.value.toLocaleString('es-CO')}`} className="factura-input w-32 text-right" />
                             </div>
-                            <div className="flex justify-between items-center">
-                                <span className="factura-totals-label">Retención</span>
-                                <input type="text" readOnly value="$ 0" className="factura-input w-40 text-right" />
+                            <div className="flex justify-between items-center gap-2">
+                                <label htmlFor="retencion-perc" className="factura-totals-label flex-1">Retención</label>
+                                <div className="flex items-center gap-1">
+                                    <input id="retencion-perc" type="number" value={retencion.percentage} onChange={(e) => handlePercentageChange(e, setRetencion)} className="factura-input w-16 text-right" placeholder="%" />
+                                    <span className="font-semibold w-4 text-left">%</span>
+                                </div>
+                                <input type="text" readOnly value={`$ ${retencion.value.toLocaleString('es-CO')}`} className="factura-input w-32 text-right" />
                             </div>
-                             <div className="flex justify-between items-center border-t pt-2 mt-1 border-gray-400">
+                            <div className="flex justify-between items-center border-t pt-2 mt-1 border-gray-400">
                                 <span className="factura-totals-label text-lg">Total</span>
-                                <input type="text" readOnly value={`$ ${order?.total.toLocaleString('es-CO') || '0'}`} className="factura-input w-40 text-right font-bold text-lg" />
+                                <input type="text" readOnly value={`$ ${total.toLocaleString('es-CO')}`} className="factura-input w-40 text-right font-bold text-lg" />
                             </div>
                         </div>
                     </div>

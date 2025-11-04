@@ -127,14 +127,16 @@ const ModuleContent: React.FC<{
     title: string; 
     onClose?: () => void;
     permissions?: Record<string, boolean>;
+    winId?: string;
+    orionProducts?: OrionProduct[];
     [key: string]: any; // To allow passing arbitrary props
-}> = ({ title, onClose = () => {}, permissions, ...props }) => {
+}> = ({ title, onClose = () => {}, permissions, winId, orionProducts, ...props }) => {
     switch (title) {
         case 'Terceros (CRM)': return <ClientesCRM permissions={permissions} terceros={props.terceros} onSave={props.onSaveTercero} />;
         case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
         case 'Soporte (PQR)': return <SoportePQR />;
-        case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} />;
-        case 'Editar Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} />;
+        case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} winId={winId} orionProducts={orionProducts} />;
+        case 'Editar Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} winId={winId} orionProducts={orionProducts} />;
         case 'Generar Ticket': return <CrearTicket onClose={onClose} />;
         case 'Facturación': return <Facturacion onClose={onClose} {...props} />;
 
@@ -153,7 +155,7 @@ const ModuleContent: React.FC<{
         case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
         case 'Producción': return <Produccion permissions={permissions} allProducts={props.orionProducts} allInsumos={props.orionInsumos} />;
         // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
-        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={null} />;
+        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={null} {...props} />;
         case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={props.ordenToEdit} />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
@@ -247,6 +249,7 @@ const Window: React.FC<{
             className={`internal-window ${win.isMaximized ? 'maximized' : ''} ${animationClass}`}
             style={{
                 ...style,
+                display: win.isMinimized ? 'none' : 'flex',
                 top: win.isMaximized ? undefined : win.position.y,
                 left: win.isMaximized ? undefined : win.position.x,
                 width: win.isMaximized ? undefined : win.size.width,
@@ -266,7 +269,7 @@ const Window: React.FC<{
                 </div>
             </div>
             <div className={`window-content ${win.title.includes('Pedido') || win.title.includes('Usuario') || win.title.includes('Permisos') || win.title.includes('Ticket') || win.title.includes('Facturación') || win.title.includes('Producto') || win.title.includes('Orden') || win.title.includes('Asiento') ? 'no-padding' : ''}`}>
-                 <ModuleContent title={win.title} onClose={() => onClose(win.id)} permissions={permissions} {...rest} {...win.props} />
+                 <ModuleContent title={win.title} onClose={() => onClose(win.id)} permissions={permissions} {...rest} {...win.props} winId={win.id} />
             </div>
         </div>
     );
@@ -612,6 +615,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     
     // Window close confirmation handlers
     const requestCloseWindow = (id: string) => {
+        const windowEl = document.getElementById(id);
+        if (windowEl?.dataset.dirty === 'true') {
+            if (!window.confirm('Hay cambios sin guardar. ¿Estás seguro de que quieres cerrar la ventana?')) {
+                return; // Abort close
+            }
+        }
+
         const windowToClose = windows.find(w => w.id === id);
         if (windowToClose) {
             if (windowToClose.isMinimized) {
@@ -953,7 +963,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             
             <main className="main-content">
                  <div className="relative w-full h-full overflow-hidden">
-                    {windows.filter(w => !w.isMinimized).map(win => {
+                    {windows.map(win => {
                         const permissionKey = invertedModuleNameMapping[win.title];
                         let permissions = permissionKey ? userPermissions[permissionKey] : {};
 

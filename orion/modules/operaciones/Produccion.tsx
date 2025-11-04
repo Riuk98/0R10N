@@ -1,6 +1,9 @@
 
 
 
+
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { OrionUser } from '../../data/internalUsers';
 import { OrionProduct, OrionInsumo } from './Inventario';
@@ -51,8 +54,9 @@ interface OrdenProduccionFormProps {
     ordenToEdit: OrdenProduccion | null;
     allProducts: OrionProduct[];
     allInsumos: OrionInsumo[];
+    productToMake?: OrionProduct;
 }
-export const OrdenProduccionForm: React.FC<OrdenProduccionFormProps> = ({ onClose, ordenToEdit, allProducts, allInsumos }) => {
+export const OrdenProduccionForm: React.FC<OrdenProduccionFormProps> = ({ onClose, ordenToEdit, allProducts, allInsumos, productToMake }) => {
     const isEditMode = !!ordenToEdit;
     const initialFormState = {
         productoId: '', productoNombre: '', cantidad: 100, fechaInicio: new Date().toISOString().split('T')[0], estado: 'Planeada' as OrdenProduccion['estado'],
@@ -61,6 +65,16 @@ export const OrdenProduccionForm: React.FC<OrdenProduccionFormProps> = ({ onClos
     const [orden, setOrden] = useState(initialFormState);
     const [ordenId, setOrdenId] = useState('');
     const [currentInsumo, setCurrentInsumo] = useState({ insumoId: '', insumoNombre: '', cantidad: 1 });
+
+    useEffect(() => {
+        if (productToMake && !isEditMode) {
+            setOrden(prev => ({
+                ...prev,
+                productoId: productToMake.id,
+                productoNombre: productToMake.nombre,
+            }));
+        }
+    }, [productToMake, isEditMode]);
 
     useEffect(() => {
         if (isEditMode && ordenToEdit) {

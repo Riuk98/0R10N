@@ -1,7 +1,7 @@
 
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { products as productList } from '../../../hatogrande/data';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { OrionProduct } from '../../modules/operaciones/Inventario';
 import { Tercero } from './ClientesCRM';
 
 // --- ICONS ---
@@ -34,6 +34,8 @@ interface CrearPedidoProps {
     orderToEdit?: any;
     clientData?: any;
     clientes?: Tercero[];
+    winId?: string;
+    orionProducts?: OrionProduct[];
 }
 
 interface OrderItem {
@@ -48,11 +50,12 @@ interface OrderItem {
 
 const getNewOrderId = () => {
     let lastId = parseInt(localStorage.getItem('lastOrderId') || '0', 10);
+    lastId++;
     localStorage.setItem('lastOrderId', lastId.toString());
     return `CO-${String(lastId).padStart(6, '0')}`;
 };
 
-const InputField = ({ label, placeholder, className = '', value, onChange, name }: { label: string, placeholder?: string, className?: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, name: string }) => (
+const InputField = React.forwardRef<HTMLInputElement, { label: string, placeholder?: string, className?: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, name: string, onFocus?: () => void, onBlur?: () => void }>(({ label, placeholder, className = '', value, onChange, name, onFocus, onBlur }, ref) => (
     <div className="flex flex-col">
         <label className="text-sm font-medium text-[var(--text-secondary)] mb-1">{label}</label>
         <input 
@@ -61,10 +64,14 @@ const InputField = ({ label, placeholder, className = '', value, onChange, name 
             name={name}
             value={value}
             onChange={onChange}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            ref={ref}
             className={`w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)] focus:border-[var(--secondary-green)] outline-none transition ${className}`} 
         />
     </div>
-);
+));
+
 
 const ActionButton = ({ icon, title, onClick, disabled }: { icon: React.ReactNode, title: string, onClick?: () => void, disabled?: boolean }) => (
     <button 
@@ -137,7 +144,7 @@ const ClientSearchModal = ({ isOpen, onClose, onSelect, clientes }: { isOpen: bo
     );
 };
 
-const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderToEdit, clientData, clientes = [] }) => {
+const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderToEdit, clientData, clientes = [], winId, orionProducts = [] }) => {
     const isEditMode = !!orderToEdit;
     const [orderId, setOrderId] = useState('');
     const [client, setClient] = useState({ nombre: '', nit: '', direccion: '', telefono: '', email: '' });
@@ -155,6 +162,25 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
     const [observations, setObservations] = useState('');
     
     const [isConfirmed, setIsConfirmed] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
+    const [isProductListVisible, setIsProductListVisible] = useState(false);
+    const productSearchRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (winId) {
+            const windowEl = document.getElementById(winId);
+            if (windowEl) {
+                windowEl.dataset.dirty = isDirty.toString();
+            }
+        }
+    }, [isDirty, winId]);
+    
+    const filteredProducts = useMemo(() => {
+        const filter = currentItem.name || currentItem.id;
+        if (!filter) return orionProducts;
+        const lowerFilter = filter.toLowerCase();
+        return orionProducts.filter(p => p.nombre.toLowerCase().includes(lowerFilter) || p.id.toLowerCase().includes(lowerFilter));
+    }, [currentItem.name, currentItem.id, orionProducts]);
 
 
     const resetForm = useCallback(() => {
@@ -163,9 +189,10 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
         setDeliveryDate('');
         setPaymentMethod('');
         setItems([]);
-        setCurrentItem({ id: '', name: '', quantity: 0, unitPrice: 0, discount: 0, totalPrice: 0 });
+        setCurrentItem({ id: '', name: '', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 });
         setObservations('');
         setOrderId(getNewOrderId());
+        setIsDirty(false);
     }, []);
 
     useEffect(() => {
@@ -208,6 +235,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
                 telefono: clientData.telefono || '',
                 email: clientData.email || '',
             });
+            setIsDirty(true);
         }
     }, [clientData, isEditMode]);
 
@@ -225,6 +253,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
             processedValue = value.replace(/[^0-9]/g, '');
         }
         setClient(c => ({...c, [name]: processedValue}));
+        setIsDirty(true);
     };
 
     const handleSelectClient = (selectedClient: Tercero) => {
@@ -237,17 +266,18 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
         });
         setPaymentMethod(selectedClient.tipoPago);
         setIsClientModalOpen(false);
+        setIsDirty(true);
     };
 
     const handleProductSearch = (productId: string) => {
-        const product = productList.find(p => p.id.toString() === productId);
+        const product = orionProducts.find(p => p.id.toString().toLowerCase() === productId.toLowerCase());
         if (product) {
             setCurrentItem(prev => ({
                 ...prev,
-                id: productId,
-                name: product.name,
-                unitPrice: product.price,
-                totalPrice: product.price * prev.quantity * (1 - prev.discount / 100),
+                id: product.id,
+                name: product.nombre,
+                unitPrice: product.valorUnitario,
+                totalPrice: product.valorUnitario * prev.quantity * (1 - prev.discount / 100),
             }));
         } else {
              setCurrentItem(prev => ({ ...prev, id: productId, name: 'Producto no encontrado', unitPrice: 0, totalPrice: 0 }));
@@ -255,36 +285,67 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
     };
     
     const handleCurrentItemChange = (field: string, value: string | number) => {
+        setIsDirty(true);
         const newValues = { ...currentItem, [field]: value };
         
-        if (typeof value === 'string') {
-           if (field === 'id') handleProductSearch(value);
-        } else { // It's a number
-            const quantity = field === 'quantity' ? value : newValues.quantity;
-            const unitPrice = newValues.unitPrice;
-            const discount = field === 'discount' ? value : newValues.discount;
-            newValues.totalPrice = quantity * unitPrice * (1 - discount / 100);
+        if (field === 'id') {
+            handleProductSearch(String(value));
+        } else {
+            const quantity = field === 'quantity' ? (Number(value) || 0) : newValues.quantity;
+            const unitPrice = field === 'unitPrice' ? (Number(value) || 0) : newValues.unitPrice;
+            const discount = field === 'discount' ? (Number(value) || 0) : newValues.discount;
+            newValues.totalPrice = quantity * unitPrice * (1 - (discount / (unitPrice * quantity || 1)) ); // Simple discount value, not percentage
         }
         
         setCurrentItem(newValues);
     };
 
+    const handleSelectProduct = (product: OrionProduct) => {
+        setCurrentItem({
+            id: product.id,
+            name: product.nombre,
+            quantity: 1,
+            unitPrice: product.valorUnitario,
+            discount: 0,
+            totalPrice: product.valorUnitario
+        });
+        setIsProductListVisible(false);
+        setIsDirty(true);
+    };
+
+
     const handleAddItem = () => {
-        if (!currentItem.id || !currentItem.name || currentItem.quantity <= 0 || currentItem.unitPrice <= 0) {
-            alert("Por favor, complete los datos del producto.");
+        if (!currentItem.id || !currentItem.name || currentItem.quantity <= 0 || currentItem.unitPrice <= 0 || currentItem.name === 'Producto no encontrado') {
+            alert("Por favor, seleccione un producto válido y complete los datos.");
             return;
         }
+
+        const productInInventory = orionProducts.find(p => p.id === currentItem.id);
+        if (productInInventory && currentItem.quantity > productInInventory.cantidad) {
+            if (window.confirm(`La cantidad solicitada (${currentItem.quantity}) excede el inventario disponible (${productInInventory.cantidad}).\n\n¿Desea crear una Orden de Producción para este producto?`)) {
+                window.dispatchEvent(new CustomEvent('createOrionWindow', {
+                    detail: {
+                        title: 'Nueva Orden de Producción',
+                        props: { productToMake: productInInventory }
+                    }
+                }));
+            }
+        }
+
         setItems(prev => [...prev, {
             ...currentItem,
             id: Date.now(),
-            productId: parseInt(currentItem.id),
+            productId: parseInt(currentItem.id.replace(/\D/g, ''), 10),
             productName: currentItem.name,
+            totalPrice: currentItem.quantity * currentItem.unitPrice - currentItem.discount,
         }]);
         setCurrentItem({ id: '', name: '', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 });
+        setIsDirty(true);
     };
     
     const handleRemoveItem = (id: number) => {
         setItems(prev => prev.filter(item => item.id !== id));
+        setIsDirty(true);
     };
 
     const saveOrderLogic = (isConfirmed: boolean = false) => {
@@ -345,6 +406,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
         const savedOrder = saveOrderLogic(false);
         if(savedOrder) {
             alert(`Pedido ${savedOrder.id} ${isEditMode ? 'actualizado' : 'guardado'} exitosamente.`);
+            setIsDirty(false);
             if (!isEditMode) {
                 resetForm();
             } else {
@@ -358,6 +420,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
         const savedOrder = saveOrderLogic(true);
         if (savedOrder) {
             setIsConfirmed(true);
+            setIsDirty(false);
             window.dispatchEvent(new CustomEvent('createOrionWindow', {
                 detail: { 
                     title: 'Facturación',
@@ -391,20 +454,20 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                             <div>
                                 <label className="text-sm font-medium text-[var(--text-secondary)] mb-1 block">Fecha</label>
-                                <input type="date" name="orderDate" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)]"/>
+                                <input type="date" name="orderDate" value={orderDate} onChange={(e) => { setOrderDate(e.target.value); setIsDirty(true); }} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)]"/>
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-[var(--text-secondary)] mb-1 block">Fecha de entrega</label>
-                                <input type="date" name="deliveryDate" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)]"/>
+                                <input type="date" name="deliveryDate" value={deliveryDate} onChange={(e) => { setDeliveryDate(e.target.value); setIsDirty(true); }} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)]"/>
                             </div>
                             <InputField label="Nombre/Razón Social" name="nombre" value={client.nombre} onChange={handleClientChange} className="col-span-2" />
                             <InputField label="NIT" name="nit" value={client.nit} onChange={handleClientChange} />
-                            <InputField label="Dirección" name="direccion" value={client.direccion} onChange={(e) => setClient(c => ({...c, direccion: e.target.value}))} />
-                            <InputField label="Teléfono" name="telefono" value={client.telefono} onChange={(e) => setClient(c => ({...c, telefono: e.target.value}))} />
-                            <InputField label="E-mail" name="email" value={client.email} onChange={(e) => setClient(c => ({...c, email: e.target.value}))} />
+                            <InputField label="Dirección" name="direccion" value={client.direccion} onChange={(e) => {setClient(c => ({...c, direccion: e.target.value})); setIsDirty(true);}} />
+                            <InputField label="Teléfono" name="telefono" value={client.telefono} onChange={(e) => {setClient(c => ({...c, telefono: e.target.value})); setIsDirty(true);}} />
+                            <InputField label="E-mail" name="email" value={client.email} onChange={(e) => {setClient(c => ({...c, email: e.target.value})); setIsDirty(true);}} />
                             <div>
                                 <label className="text-sm font-medium text-[var(--text-secondary)] mb-1 block">Tipo de pago</label>
-                                <select name="paymentMethod" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)] h-[34px]">
+                                <select name="paymentMethod" value={paymentMethod} onChange={(e) => {setPaymentMethod(e.target.value); setIsDirty(true);}} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)] h-[34px]">
                                     <option value="">Seleccione...</option>
                                     <option value="Contado">Contado</option>
                                     <option value="Crédito">Crédito</option>
@@ -421,14 +484,24 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
                     </div>
                 </div>
 
-                <div className="flex flex-col md:flex-row md:items-end gap-2 p-4 border border-[var(--border-color)] rounded-2xl bg-[var(--bg-main)]/50">
-                    <InputField label="Cod. Producto" className="flex-1 min-w-0" name="id" value={currentItem.id} onChange={(e) => handleCurrentItemChange('id', e.target.value)} />
-                    <InputField label="Descripción" className="flex-[2] min-w-0" name="name" value={currentItem.name} onChange={(e) => handleCurrentItemChange('name', e.target.value)} />
+                <div ref={productSearchRef} className="relative flex flex-col md:flex-row md:items-end gap-2 p-4 border border-[var(--border-color)] rounded-2xl bg-[var(--bg-main)]/50">
+                    <InputField label="Cod. Producto" className="flex-1 min-w-0" name="id" value={currentItem.id} onChange={(e) => handleCurrentItemChange('id', e.target.value)} onFocus={() => setIsProductListVisible(true)} />
+                    <InputField label="Descripción" className="flex-[2] min-w-0" name="name" value={currentItem.name} onChange={(e) => handleCurrentItemChange('name', e.target.value)} onFocus={() => setIsProductListVisible(true)} />
                     <InputField label="Cantidad" className="w-full md:w-20" name="quantity" value={String(currentItem.quantity)} onChange={(e) => handleCurrentItemChange('quantity', parseInt(e.target.value) || 0)} />
                     <InputField label="Valor Unitario" className="w-full md:w-28" name="unitPrice" value={String(currentItem.unitPrice)} onChange={(e) => handleCurrentItemChange('unitPrice', parseFloat(e.target.value) || 0)} />
                     <InputField label="Descuento" className="w-full md:w-24" name="discount" value={String(currentItem.discount)} onChange={(e) => handleCurrentItemChange('discount', parseFloat(e.target.value) || 0)} />
                     <InputField label="Valor Total" className="w-full md:w-28" name="totalPrice" value={`$ ${currentItem.totalPrice.toLocaleString('es-CO')}`} onChange={() => {}} />
                     <button onClick={handleAddItem} className="p-2 bg-[var(--bg-main)] rounded-full hover:opacity-80 transition-colors self-center md:self-auto"><PlusIcon className="w-5 h-5"/></button>
+                    {isProductListVisible && (
+                        <div className="absolute top-full left-0 mt-1 w-full md:w-1/2 bg-white dark:bg-gray-800 shadow-lg max-h-48 overflow-y-auto z-20 rounded-md border border-[var(--border-color)]">
+                            {filteredProducts.length > 0 ? filteredProducts.map(p => (
+                                <div key={p.id} onMouseDown={() => handleSelectProduct(p)} className="p-2 hover:bg-[var(--bg-main)] cursor-pointer">
+                                    <p className="font-semibold">{p.nombre}</p>
+                                    <p className="text-xs text-[var(--text-secondary)]">Cód: {p.id} | Stock: {p.cantidad}</p>
+                                </div>
+                            )) : <div className="p-2 text-center text-[var(--text-secondary)]">No se encontraron productos</div>}
+                        </div>
+                    )}
                 </div>
 
                 <div className="h-48 border border-[var(--border-color)] overflow-auto rounded-lg">
@@ -465,10 +538,10 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="col-span-1 md:col-span-2 space-y-2">
                          <div className="flex gap-4">
-                            <InputField label="ID Vendedor" className="flex-1" name="sellerId" value={seller.id} onChange={(e) => setSeller(s => ({...s, id: e.target.value}))} />
-                            <InputField label="Nombre Vendedor" className="flex-[2]" name="sellerName" value={seller.name} onChange={(e) => setSeller(s => ({...s, name: e.target.value}))} />
+                            <InputField label="ID Vendedor" className="flex-1" name="sellerId" value={seller.id} onChange={(e) => {setSeller(s => ({...s, id: e.target.value})); setIsDirty(true);}} />
+                            <InputField label="Nombre Vendedor" className="flex-[2]" name="sellerName" value={seller.name} onChange={(e) => {setSeller(s => ({...s, name: e.target.value})); setIsDirty(true);}} />
                          </div>
-                         <InputField label="Observaciones" name="observations" value={observations} onChange={(e) => setObservations(e.target.value)} />
+                         <InputField label="Observaciones" name="observations" value={observations} onChange={(e) => {setObservations(e.target.value); setIsDirty(true);}} />
                     </div>
                      <div className="space-y-1 text-right">
                          <div className="flex items-center justify-end gap-2">
@@ -489,7 +562,6 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
                 <div className="pt-4 mt-4 border-t border-[var(--border-color)] flex justify-end items-center">
                     <div className="flex items-center gap-2">
                         <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSimpleSave} disabled={(!permissions?.crear && !isEditMode) || (!permissions?.actualizar && isEditMode) || isConfirmed} />
-                        lastId++;
                         <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" disabled={!permissions?.eliminar || isConfirmed} />
                         <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" disabled={!permissions?.actualizar || isConfirmed} />
                         <ActionButton icon={<CheckIcon className="w-5 h-5 text-green-600"/>} title="Confirmar" onClick={handleConfirmAndInvoice} disabled={!permissions?.crear || isConfirmed} />
