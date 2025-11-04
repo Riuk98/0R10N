@@ -71,6 +71,7 @@ const Icons = {
     Admin: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>),
     ArrowLeft: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>),
     Trash: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>),
+    Pin: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M9 10l-4 4"/><path d="M15 10l4 4"/><path d="M16 4.5L14 2.5"/><path d="M8 4.5L10 2.5"/><path d="M12 2v2.5"/><path d="M12 17A4.5 4.5 0 0012 8a4.5 4.5 0 000 9z"/></svg>),
     Close: (props: React.SVGProps<SVGSVGElement>) => (
         <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -294,9 +295,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(true);
     const [isSidebarForceOpen, setSidebarForceOpen] = useState(false);
     const [isPartiallyCollapsed, setPartiallyCollapsed] = useState(false);
-    const [openPillars, setOpenPillars] = useState<string[]>([]);
+    const [openPillars, setOpenPillars] = useState<string | null>(null);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
+    const sidebarRef = useRef<HTMLDivElement>(null);
+    const [isSidebarPinned, setSidebarPinned] = useState(() => localStorage.getItem('orionSidebarPinned') === 'true');
     const [currentTime, setCurrentTime] = useState('');
     const [windows, setWindows] = useState<WindowState[]>([]);
     const [windowToCloseId, setWindowToCloseId] = useState<string | null>(null);
@@ -475,9 +478,47 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
         const timer = setTimeout(() => setIsInitialLoad(false), 50); // Short delay to apply initial styles
         return () => clearTimeout(timer);
     }, []);
+    
+    // Save sidebar pinned state to localStorage
+    useEffect(() => {
+        localStorage.setItem('orionSidebarPinned', String(isSidebarPinned));
+    }, [isSidebarPinned]);
+
+    // Click outside sidebar to collapse it (if not pinned)
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (isSidebarPinned) return;
+    
+            const menuToggle = document.getElementById('menu-toggle');
+            if (menuToggle && menuToggle.contains(event.target as Node)) {
+                return;
+            }
+    
+            if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+                // For mobile view, the overlay has its own click handler
+                if (isSidebarForceOpen) {
+                    setSidebarForceOpen(false);
+                    return;
+                }
+                
+                // For desktop, if it's fully open, partially collapse it
+                if (!isSidebarCollapsed && !isPartiallyCollapsed) {
+                    setPartiallyCollapsed(true);
+                    setOpenPillars(null); // Also collapse any open module
+                }
+            }
+        };
+    
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isSidebarPinned, isSidebarCollapsed, isPartiallyCollapsed, isSidebarForceOpen]);
+
 
     const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
     const togglePartialCollapse = () => setPartiallyCollapsed(!isPartiallyCollapsed);
+    const toggleSidebarPin = () => setSidebarPinned(prev => !prev);
 
     const toggleSidebar = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -490,10 +531,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
 
     const handlePillarClick = (title: string) => {
         const togglePillar = () => {
-            setOpenPillars(prevOpenPillars =>
-                prevOpenPillars.includes(title)
-                    ? prevOpenPillars.filter(p => p !== title)
-                    : [...prevOpenPillars, title]
+            setOpenPillars(prevOpenPillar =>
+                prevOpenPillar === title ? null : title
             );
         };
 
@@ -653,7 +692,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
         body.classList.toggle('sidebar-collapsed', isSidebarCollapsed);
         body.classList.toggle('sidebar-force-open', isSidebarForceOpen);
         body.classList.toggle('sidebar-partially-collapsed', isPartiallyCollapsed);
-    }, [theme, isSidebarCollapsed, isSidebarForceOpen, isPartiallyCollapsed, isInitialLoad]);
+        body.classList.toggle('sidebar-pinned', isSidebarPinned);
+    }, [theme, isSidebarCollapsed, isSidebarForceOpen, isPartiallyCollapsed, isInitialLoad, isSidebarPinned]);
 
     const filteredNavData = navData.map(pillar => ({
         ...pillar,
@@ -759,7 +799,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
                 .submenu a { padding: 12px 20px 12px 45px; font-size: 0.9em; white-space: nowrap; }
                 .submenu a:hover { background-color: var(--bg-main); opacity: 0.8;}
                 .sidebar-footer { padding: 10px; border-top: 1px solid var(--border-color); margin-top: auto; flex-shrink: 0; }
-                .sidebar-footer button { display: flex; align-items: center; gap: 15px; width: 100%; padding: 10px; border-radius: 5px; background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 0.9em; font-weight: 500; text-align: left; }
+                .sidebar-footer button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px 10px; border-radius: 5px; background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8em; font-weight: 500; text-align: left; }
                 .sidebar-footer button:hover { background-color: var(--bg-main); }
                 .sidebar-footer button.close-all-btn:hover { background-color: rgba(217, 83, 79, 0.1); color: #d9534f; }
                 .sidebar-footer .collapse-arrow { transition: transform 0.3s ease; }
@@ -923,18 +963,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
                 </div>
             </header>
 
-            <aside className="sidebar">
+            <aside className="sidebar" ref={sidebarRef}>
                 <ul className="sidebar-nav">
                     {filteredNavData.map(pillar => (
                          <li key={pillar.title} className="nav-item">
-                            <div onClick={() => handlePillarClick(pillar.title)} className={`pillar-toggle ${openPillars.includes(pillar.title) ? 'open' : ''}`}>
+                            <div onClick={() => handlePillarClick(pillar.title)} className={`pillar-toggle ${openPillars === pillar.title ? 'open' : ''}`}>
                                 <span className="arrow">▶</span>
                                 <div className="pillar-content">
                                     <pillar.icon className="w-5 h-5 flex-shrink-0" />
                                     <span>{pillar.title}</span>
                                 </div>
                             </div>
-                            <ul className={`submenu ${openPillars.includes(pillar.title) ? 'open' : ''}`} style={{maxHeight: openPillars.includes(pillar.title) ? '500px' : '0'}}>
+                            <ul className={`submenu ${openPillars === pillar.title ? 'open' : ''}`} style={{maxHeight: openPillars === pillar.title ? '500px' : '0'}}>
                                 {pillar.items.map(item => (
                                     <li key={item}>
                                         <a href="#" onClick={(e) => { e.preventDefault(); createWindow(item); }}>{item}</a>
@@ -945,6 +985,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
                     ))}
                 </ul>
                  <div className="sidebar-footer">
+                    <button onClick={toggleSidebarPin} title={isSidebarPinned ? "Desfijar menú" : "Fijar menú"}>
+                        <Icons.Pin className="w-5 h-5 flex-shrink-0" style={{ fill: isSidebarPinned ? 'currentColor' : 'none', transform: isSidebarPinned ? 'rotate(45deg)' : 'none' }}/>
+                        <span>{isSidebarPinned ? 'Fijo' : 'Fijar'}</span>
+                    </button>
                     <button onClick={togglePartialCollapse} title="Contraer menú">
                         <Icons.ArrowLeft className="collapse-arrow w-5 h-5 flex-shrink-0" />
                         <span>Contraer</span>
