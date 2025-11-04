@@ -173,7 +173,7 @@ const Contabilidad: React.FC = () => {
             />
 
             <div className="flex-grow overflow-auto border border-[var(--border-color)] rounded-lg shadow-md">
-                <table className="w-full text-sm text-left text-[var(--text-secondary)]">
+                <table className="w-full text-sm text-left text-[var(--text-secondary)] min-w-[1000px]">
                     <thead className="text-xs uppercase bg-[var(--bg-main)] text-[var(--text-primary)] sticky top-0">
                         <tr>
                             <th scope="col" className="py-3 px-6 w-12"></th>
@@ -227,7 +227,7 @@ const Contabilidad: React.FC = () => {
                                                             <span>{formatCurrency(asiento.partidas.reduce((s, p) => s + p.credito, 0))}</span>
                                                         </div>
                                                      </div>
-                                                    <table className="w-full text-xs">
+                                                    <table className="w-full text-xs min-w-[700px]">
                                                         <thead className="font-bold">
                                                             <tr>
                                                                 <td className="pb-2 px-2">Cuenta</td>
@@ -571,20 +571,22 @@ export const NuevoAsientoContableForm: React.FC<NuevoAsientoContableFormProps> =
             </div>
 
             <div className="flex-grow overflow-y-auto border-t border-b border-[var(--border-color)] py-2">
-                {partidas.map((partida, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-2 items-center mb-2">
-                        <div className="col-span-3 relative">
-                            <input type="text" placeholder="Cuenta (e.g., 110505)" value={partida.cuenta} onChange={e => handlePartidaChange(index, 'cuenta', e.target.value)} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm pr-8" />
-                            <button type="button" onClick={() => openModalForPartida(index)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[var(--border-color)]" title="Buscar Cuentas Pendientes">
-                                <SearchIcon className="w-4 h-4 text-gray-500" />
-                            </button>
+                <div className="min-w-[800px]">
+                    {partidas.map((partida, index) => (
+                        <div key={index} className="grid grid-cols-12 gap-2 items-center mb-2">
+                            <div className="col-span-3 relative">
+                                <input type="text" placeholder="Cuenta (e.g., 110505)" value={partida.cuenta} onChange={e => handlePartidaChange(index, 'cuenta', e.target.value)} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm pr-8" />
+                                <button type="button" onClick={() => openModalForPartida(index)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[var(--border-color)]" title="Buscar Cuentas Pendientes">
+                                    <SearchIcon className="w-4 h-4 text-gray-500" />
+                                </button>
+                            </div>
+                            <input type="text" placeholder="Descripción" value={partida.descripcion} onChange={e => handlePartidaChange(index, 'descripcion', e.target.value)} className="col-span-4 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
+                            <input type="number" placeholder="Débito" value={partida.debito || ''} onChange={e => handlePartidaChange(index, 'debito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
+                            <input type="number" placeholder="Crédito" value={partida.credito || ''} onChange={e => handlePartidaChange(index, 'credito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
+                            <button onClick={() => removePartida(index)} className="col-span-1 text-red-500 hover:text-red-700 disabled:opacity-50" disabled={partidas.length <= 2}><TrashIcon /></button>
                         </div>
-                        <input type="text" placeholder="Descripción" value={partida.descripcion} onChange={e => handlePartidaChange(index, 'descripcion', e.target.value)} className="col-span-4 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
-                        <input type="number" placeholder="Débito" value={partida.debito || ''} onChange={e => handlePartidaChange(index, 'debito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
-                        <input type="number" placeholder="Crédito" value={partida.credito || ''} onChange={e => handlePartidaChange(index, 'credito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
-                        <button onClick={() => removePartida(index)} className="col-span-1 text-red-500 hover:text-red-700 disabled:opacity-50" disabled={partidas.length <= 2}><TrashIcon /></button>
-                    </div>
-                ))}
+                    ))}
+                </div>
                 <button onClick={addPartida} className="text-sm text-[var(--secondary-green)] font-semibold hover:opacity-80">+ Añadir Partida</button>
             </div>
 

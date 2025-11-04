@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 // --- TYPE DEFINITION ---
@@ -81,7 +80,8 @@ const CuentasPagar: React.FC = () => {
         );
     }, [cuentas, searchTerm]);
 
-    const calculateDiasMora = (fechaVencimiento: string) => {
+    const calculateDiasMora = (fechaVencimiento: string, saldo: number) => {
+        if (saldo <= 0) return 0;
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0); // Compare dates only, ignoring time
         const vencimiento = new Date(fechaVencimiento);
@@ -106,7 +106,7 @@ const CuentasPagar: React.FC = () => {
 
     const totals = useMemo(() => {
         return filteredCuentas.reduce((acc, cuenta) => {
-            const diasMora = calculateDiasMora(cuenta.fechaVencimiento);
+            const diasMora = calculateDiasMora(cuenta.fechaVencimiento, cuenta.saldo);
             const buckets = getAgingBucket(diasMora, cuenta.saldo);
             acc.total += cuenta.valorTotal;
             acc.saldo += cuenta.saldo;
@@ -175,6 +175,7 @@ const CuentasPagar: React.FC = () => {
                 .cxp-table {
                     width: 100%;
                     border-collapse: collapse;
+                    min-width: 1400px;
                 }
                 .cxp-table thead {
                     position: sticky;
@@ -273,7 +274,7 @@ const CuentasPagar: React.FC = () => {
                         </thead>
                         <tbody>
                             {filteredCuentas.map(cuenta => {
-                                const diasMora = calculateDiasMora(cuenta.fechaVencimiento);
+                                const diasMora = calculateDiasMora(cuenta.fechaVencimiento, cuenta.saldo);
                                 const buckets = getAgingBucket(diasMora, cuenta.saldo);
                                 return (
                                     <tr key={cuenta.id}>

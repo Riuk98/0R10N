@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { OrionUser } from '../../data/internalUsers';
 import { OrionInsumo } from './Inventario';
@@ -275,7 +273,7 @@ export const OrdenCompraForm: React.FC<OrdenCompraFormProps> = ({ onClose, orden
 
             {/* Items Table */}
             <div className="flex-grow overflow-y-auto border-y border-[var(--border-color)] py-2">
-                 <table className="w-full text-sm">
+                 <table className="w-full text-sm min-w-[700px]">
                     <thead className="font-bold text-left"><tr><th className="pb-2">Cód.</th><th className="pb-2">Descripción</th><th className="pb-2">Cant.</th><th className="pb-2 text-right">Vlr. Unit.</th><th className="pb-2 text-right">Vlr. Total</th><th></th></tr></thead>
                     <tbody>
                         {orden.items.map(item => (
@@ -430,7 +428,7 @@ const Compras: React.FC<ComprasProps> = ({ permissions, allInsumos, proveedores 
             </div>
 
             <div className="flex-grow overflow-auto border border-[var(--border-color)] rounded-lg shadow-md">
-                <table className="w-full text-sm text-left text-[var(--text-secondary)]">
+                <table className="w-full text-sm text-left text-[var(--text-secondary)] min-w-[1000px]">
                     <thead className="text-xs uppercase bg-[var(--bg-main)] text-[var(--text-primary)] sticky top-0">
                         <tr>
                             <th scope="col" className="py-3 px-6"># OC</th>

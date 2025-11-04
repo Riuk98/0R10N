@@ -260,7 +260,7 @@ const Produccion: React.FC<ProduccionProps> = ({ permissions, allProducts, allIn
             </div>
 
             <div className="flex-grow overflow-auto border rounded-lg shadow-md">
-                <table className="w-full text-sm text-left">
+                <table className="w-full text-sm text-left min-w-[900px]">
                     <thead className="text-xs uppercase bg-[var(--bg-main)] sticky top-0"><tr>
                         {['# OP', 'Producto a Fabricar', 'Cantidad', 'Fecha Inicio', 'Estado', 'Acciones'].map(h => <th key={h} scope="col" className="py-3 px-6">{h}</th>)}
                     </tr></thead>
