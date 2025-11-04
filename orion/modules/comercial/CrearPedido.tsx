@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { OrionProduct } from '../../modules/operaciones/Inventario';
 import { Tercero } from './ClientesCRM';
@@ -146,6 +145,7 @@ const ClientSearchModal = ({ isOpen, onClose, onSelect, clientes }: { isOpen: bo
 
 const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderToEdit, clientData, clientes = [], winId, orionProducts = [] }) => {
     const isEditMode = !!orderToEdit;
+    const [currentUserRole, setCurrentUserRole] = useState('');
     const [orderId, setOrderId] = useState('');
     const [client, setClient] = useState({ nombre: '', nit: '', direccion: '', telefono: '', email: '' });
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -165,6 +165,14 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
     const [isDirty, setIsDirty] = useState(false);
     const [isProductListVisible, setIsProductListVisible] = useState(false);
     const productSearchRef = useRef<HTMLDivElement>(null);
+
+     useEffect(() => {
+        const userRaw = sessionStorage.getItem('orionCurrentUser');
+        if (userRaw) {
+            const user = JSON.parse(userRaw);
+            setCurrentUserRole(user.role);
+        }
+    }, []);
 
     useEffect(() => {
         if (winId) {
@@ -402,7 +410,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
 
 
     const handleSimpleSave = () => {
-        if (isConfirmed) return;
+        if (isConfirmed && currentUserRole !== 'Administrador') return;
         const savedOrder = saveOrderLogic(false);
         if(savedOrder) {
             alert(`Pedido ${savedOrder.id} ${isEditMode ? 'actualizado' : 'guardado'} exitosamente.`);
@@ -429,6 +437,19 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
             }));
         }
     };
+
+    const handleDeleteOrder = () => {
+        if (!isEditMode) return;
+        if (window.confirm(`¿Está seguro de que desea eliminar el pedido ${orderId}? Esta acción no se puede deshacer.`)) {
+            const storedPedidos = JSON.parse(localStorage.getItem('hatoGrandePedidos') || '[]');
+            const updatedPedidos = storedPedidos.filter((o: any) => o.id !== orderId);
+            localStorage.setItem('hatoGrandePedidos', JSON.stringify(updatedPedidos));
+            window.dispatchEvent(new Event("storage"));
+            onClose();
+        }
+    };
+
+    const isAdmin = currentUserRole === 'Administrador';
     
     if (isConfirmed && !isEditMode) {
         return (
@@ -561,9 +582,9 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
 
                 <div className="pt-4 mt-4 border-t border-[var(--border-color)] flex justify-end items-center">
                     <div className="flex items-center gap-2">
-                        <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSimpleSave} disabled={(!permissions?.crear && !isEditMode) || (!permissions?.actualizar && isEditMode) || isConfirmed} />
-                        <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" disabled={!permissions?.eliminar || isConfirmed} />
-                        <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" disabled={!permissions?.actualizar || isConfirmed} />
+                        <ActionButton icon={<SaveIcon className="w-5 h-5"/>} title="Guardar" onClick={handleSimpleSave} disabled={(!permissions?.crear && !isEditMode) || (!permissions?.actualizar && isEditMode) || (isConfirmed && !isAdmin)} />
+                        <ActionButton icon={<TrashIcon className="w-5 h-5"/>} title="Eliminar" onClick={handleDeleteOrder} disabled={!isEditMode || !permissions?.eliminar || (isConfirmed && !isAdmin)} />
+                        <ActionButton icon={<EditIcon className="w-5 h-5"/>} title="Editar" disabled={!permissions?.actualizar || (isConfirmed && !isAdmin)} />
                         <ActionButton icon={<CheckIcon className="w-5 h-5 text-green-600"/>} title="Confirmar" onClick={handleConfirmAndInvoice} disabled={!permissions?.crear || isConfirmed} />
                     </div>
                 </div>

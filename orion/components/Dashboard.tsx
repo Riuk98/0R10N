@@ -1,9 +1,5 @@
 
 
-
-
-
-
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Switch from './Switch'; // Import the new Switch component
 
@@ -114,6 +110,7 @@ const moduleNameMapping: { [key: string]: string } = {
     "Reportes y analiticas": "Reportes y Analíticas",
     "Gestion de usuarios": "Gestión de Usuarios",
     "Configuracion": "Configuración",
+    "Gestion de permisos": "Gestión de Permisos",
 };
 
 const invertedModuleNameMapping: { [key: string]: string } = {};
@@ -129,9 +126,8 @@ const ModuleContent: React.FC<{
     permissions?: Record<string, boolean>;
     winId?: string;
     orionProducts?: OrionProduct[];
-    orionInsumos?: OrionInsumo[];
     [key: string]: any; // To allow passing arbitrary props
-}> = ({ title, onClose = () => {}, permissions, winId, orionProducts, orionInsumos, ...props }) => {
+}> = ({ title, onClose = () => {}, permissions, winId, orionProducts, ...props }) => {
     switch (title) {
         case 'Terceros (CRM)': return <ClientesCRM permissions={permissions} terceros={props.terceros} onSave={props.onSaveTercero} />;
         case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
@@ -148,22 +144,21 @@ const ModuleContent: React.FC<{
         case 'Nuevo Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
         case 'Editar Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
         
-        case 'Inventario': return <Inventario permissions={permissions} products={orionProducts} insumos={orionInsumos} />;
+        case 'Inventario': return <Inventario permissions={permissions} products={props.orionProducts} insumos={props.orionInsumos} />;
         case 'Anadir Producto': return <AnadirProducto onClose={onClose} onAddProduct={props.onAddProduct} />;
-        case 'Compras': return <Compras permissions={permissions} allInsumos={orionInsumos} proveedores={props.proveedores} />;
-        // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
-        case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
-        case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
-        case 'Producción': return <Produccion permissions={permissions} allProducts={orionProducts} allInsumos={orionInsumos} />;
-        // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
-        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={orionProducts} allInsumos={orionInsumos} ordenToEdit={null} {...props} />;
-        case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={orionProducts} allInsumos={orionInsumos} ordenToEdit={props.ordenToEdit} />;
+        case 'Compras': return <Compras permissions={permissions} allInsumos={props.orionInsumos} proveedores={props.proveedores} />;
+        case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
+        case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
+        case 'Producción': return <Produccion permissions={permissions} allProducts={props.orionProducts} allInsumos={props.orionInsumos} />;
+        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={null} {...props} />;
+        case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={props.ordenToEdit} />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
         case 'Gestión de Usuarios': return <GestionUsuarios users={props.users} onDeleteSuccess={props.onDeleteSuccess} permissions={permissions} />;
         case 'Configuración': return <Configuracion />;
         case 'Registro de Usuario': return <RegistroUsuario onRegisterSuccess={props.onRegisterSuccess} onClose={onClose} permissions={permissions} users={props.users} {...props} />;
         case 'Editar Usuario': return <RegistroUsuario onUpdateSuccess={props.onUpdateSuccess} onClose={onClose} permissions={permissions} users={props.users} {...props} />;
+        case 'Gestión de Permisos': return <GestionPermisos onClose={onClose} />;
                 
         default: return <p>Contenido para {title} no encontrado.</p>;
     }
@@ -974,7 +969,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                         } else if (win.title === 'Registro de Usuario' || win.title === 'Editar Usuario') {
                             permissions = userPermissions[invertedModuleNameMapping['Gestión de Usuarios']] || {};
                         } else if (win.title === 'Gestión de Permisos') {
-                            permissions = userPermissions[invertedModuleNameMapping['Gestión de Permisos']] || {};
+                            permissions = userPermissions['Gestion de permisos'] || {};
                         }
                         
                         return (

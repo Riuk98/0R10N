@@ -1,6 +1,20 @@
+import React, { useState, useEffect, useMemo } from 'react';
 
+// --- TYPE DEFINITION ---
+interface CuentaPorCobrar {
+    id: string;
+    facturaId: string;
+    clienteNit: string;
+    clienteNombre: string;
+    clienteTelefono: string;
+    ciudad: string;
+    fechaEmision: string;
+    fechaVencimiento: string;
+    valorFactura: number;
+    saldo: number;
+}
 
-import React from 'react';
+const CUENTAS_COBRAR_STORAGE_KEY = 'orionCuentasCobrar';
 
 // --- ICONS ---
 const CloudDownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -27,11 +41,73 @@ const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 const CuentasCobrar: React.FC = () => {
+    const [cuentas, setCuentas] = useState<CuentaPorCobrar[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const loadCuentas = () => {
+        try {
+            const storedCuentas = localStorage.getItem(CUENTAS_COBRAR_STORAGE_KEY);
+            if (storedCuentas) {
+                setCuentas(JSON.parse(storedCuentas));
+            }
+        } catch (error) {
+            console.error("Failed to load accounts receivable:", error);
+        }
+    };
+    
+    useEffect(() => {
+        loadCuentas();
+        window.addEventListener('storage', loadCuentas);
+        return () => window.removeEventListener('storage', loadCuentas);
+    }, []);
+
+    const filteredCuentas = useMemo(() => {
+        if (!searchTerm) return cuentas;
+        const lowercasedFilter = searchTerm.toLowerCase();
+        return cuentas.filter(c => 
+            c.clienteNombre.toLowerCase().includes(lowercasedFilter) ||
+            c.clienteNit.includes(lowercasedFilter) ||
+            c.facturaId.toLowerCase().includes(lowercasedFilter)
+        );
+    }, [cuentas, searchTerm]);
+
+    const calculateDiasMora = (fechaVencimiento: string) => {
+        const hoy = new Date();
+        const vencimiento = new Date(fechaVencimiento);
+        if (hoy <= vencimiento) return 0;
+        const diffTime = Math.abs(hoy.getTime() - vencimiento.getTime());
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    };
+
+    const getAgingBucket = (diasMora: number, saldo: number) => {
+        if (diasMora <= 30) return { '0-30': saldo, '31-60': 0, '61-90': 0, '91+': 0 };
+        if (diasMora <= 60) return { '0-30': 0, '31-60': saldo, '61-90': 0, '91+': 0 };
+        if (diasMora <= 90) return { '0-30': 0, '31-60': 0, '61-90': saldo, '91+': 0 };
+        return { '0-30': 0, '31-60': 0, '61-90': 0, '91+': saldo };
+    };
+
+    const formatCurrency = (value: number) => value === 0 ? '' : new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
+
     const tableHeaders = [
         "NIT", "Nombre", "Teléfono", "Ciudad", "Dias Mora", "Vlr. Total Fac.", 
         "Dto. Pto. Pago", "F. Dcto.", "Saldo", "0 - 30 Dias", "31 - 60 Dias", 
         "61 - 90 Dias", "91 y más dias"
     ];
+
+    const totals = useMemo(() => {
+        return filteredCuentas.reduce((acc, cuenta) => {
+            const diasMora = calculateDiasMora(cuenta.fechaVencimiento);
+            const buckets = getAgingBucket(diasMora, cuenta.saldo);
+            acc.total += cuenta.valorFactura;
+            acc.saldo += cuenta.saldo;
+            acc['0-30'] += buckets['0-30'];
+            acc['31-60'] += buckets['31-60'];
+            acc['61-90'] += buckets['61-90'];
+            acc['91+'] += buckets['91+'];
+            return acc;
+        }, { total: 0, saldo: 0, '0-30': 0, '31-60': 0, '61-90': 0, '91+': 0 });
+    }, [filteredCuentas]);
+
 
     return (
         <>
@@ -112,20 +188,21 @@ const CuentasCobrar: React.FC = () => {
                     top: 0;
                     z-index: 10;
                 }
-                .cxc-table th {
-                    background-color: var(--bg-main);
+                .cxc-table th, .cxc-table td {
                     padding: 0.5rem;
                     border: 1px solid var(--border-color);
-                    font-weight: bold;
                     text-align: center;
                     white-space: nowrap;
+                }
+                .cxc-table th {
+                    background-color: var(--bg-main);
+                    font-weight: bold;
                 }
                 .cxc-table tbody tr {
                     background-color: var(--bg-card);
                 }
-                .cxc-table tbody td {
-                     border: 1px solid var(--border-color);
-                     height: 1.5rem; /* For empty cells */
+                 .cxc-table tbody td:nth-child(2) {
+                    text-align: left;
                 }
                 .cxc-footer {
                     flex-shrink: 0;
@@ -143,13 +220,20 @@ const CuentasCobrar: React.FC = () => {
                 .cxc-footer-actions button:hover {
                     color: var(--text-primary);
                 }
+                .cxc-footer-summary {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 4px;
+                }
                 .cxc-footer-summary input {
-                    width: 80px;
+                    width: 90px;
                     text-align: right;
                     background-color: var(--bg-main);
                     border: 1px solid var(--border-color);
                     border-radius: 0.25rem;
                     padding: 0.25rem;
+                    font-size: 0.75rem;
+                    font-weight: bold;
                 }
                 @media (max-width: 768px) {
                     .cxc-filters {
@@ -182,7 +266,7 @@ const CuentasCobrar: React.FC = () => {
                         </div>
                         <div className="cxc-checkbox-group">
                             <div className="cxc-checkbox-item">
-                                <input id="pendientes" type="checkbox" />
+                                <input id="pendientes" type="checkbox" defaultChecked/>
                                 <label htmlFor="pendientes">Pendientes</label>
                             </div>
                         </div>
@@ -191,9 +275,11 @@ const CuentasCobrar: React.FC = () => {
                      <div className="relative">
                         <input
                             type="text"
-                            placeholder="Buscar..."
+                            placeholder="Buscar por NIT, nombre o factura..."
                             className="cxc-input with-icon"
                             style={{ width: '250px' }}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
                         <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none">
                             <SearchIcon className="w-5 h-5" />
@@ -210,7 +296,27 @@ const CuentasCobrar: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {/* Empty body to match screenshot */}
+                            {filteredCuentas.map(cuenta => {
+                                const diasMora = calculateDiasMora(cuenta.fechaVencimiento);
+                                const buckets = getAgingBucket(diasMora, cuenta.saldo);
+                                return (
+                                    <tr key={cuenta.id}>
+                                        <td>{cuenta.clienteNit}</td>
+                                        <td>{cuenta.clienteNombre}</td>
+                                        <td>{cuenta.clienteTelefono}</td>
+                                        <td>{cuenta.ciudad}</td>
+                                        <td className={diasMora > 0 ? 'text-red-600 font-bold' : ''}>{diasMora}</td>
+                                        <td>{formatCurrency(cuenta.valorFactura)}</td>
+                                        <td></td>{/* Dto. Pto. Pago */}
+                                        <td></td>{/* F. Dcto. */}
+                                        <td className="font-semibold">{formatCurrency(cuenta.saldo)}</td>
+                                        <td>{formatCurrency(buckets['0-30'])}</td>
+                                        <td>{formatCurrency(buckets['31-60'])}</td>
+                                        <td>{formatCurrency(buckets['61-90'])}</td>
+                                        <td>{formatCurrency(buckets['91+'])}</td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -219,13 +325,13 @@ const CuentasCobrar: React.FC = () => {
                 <div className="cxc-footer">
                     <div className="cxc-footer-actions flex items-center gap-2">
                         <button title="Descargar"><CloudDownloadIcon className="w-6 h-6" /></button>
-                        <button title="Refrescar"><RefreshIcon className="w-6 h-6" /></button>
+                        <button title="Refrescar" onClick={loadCuentas}><RefreshIcon className="w-6 h-6" /></button>
                     </div>
-                    <div className="cxc-footer-summary flex items-center gap-1">
-                        <input type="text" disabled />
-                        <input type="text" disabled />
-                        <input type="text" disabled />
-                        <input type="text" disabled />
+                    <div className="cxc-footer-summary">
+                        <input type="text" readOnly value={formatCurrency(totals['0-30'])} title="Total 0-30 Días" />
+                        <input type="text" readOnly value={formatCurrency(totals['31-60'])} title="Total 31-60 Días" />
+                        <input type="text" readOnly value={formatCurrency(totals['61-90'])} title="Total 61-90 Días" />
+                        <input type="text" readOnly value={formatCurrency(totals['91+'])} title="Total 91+ Días" />
                     </div>
                 </div>
             </div>

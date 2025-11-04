@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 
 // --- ICONS ---
@@ -84,6 +82,16 @@ interface Ticket {
     originalId: string;
 }
 
+interface Movimiento {
+    id: string;
+    terceroId: string;
+    fecha: string;
+    tipo: 'Factura' | 'Pago' | 'Nota Crédito';
+    documentoId: string;
+    monto: number;
+}
+
+
 interface FormData {
     nombre: string;
     nit: string;
@@ -100,6 +108,9 @@ interface ClientesCRMProps {
     terceros: Tercero[];
     onSave: (tercero: Tercero) => void;
 }
+
+const TERCEROS_MOVIMIENTOS_KEY = 'orionTercerosMovimientos';
+
 
 const InputField = ({ label, name, value, onChange }: { label: string, name: string, value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
     <div className="flex flex-col">
@@ -208,29 +219,40 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
     const [allTickets, setAllTickets] = useState<Ticket[]>([]);
     const [customerTickets, setCustomerTickets] = useState<Ticket[]>([]);
     const [isListModalOpen, setIsListModalOpen] = useState(false);
-
+    const [allMovimientos, setAllMovimientos] = useState<Movimiento[]>([]);
+    const [customerMovimientos, setCustomerMovimientos] = useState<Movimiento[]>([]);
 
     useEffect(() => {
-        try {
-            const storedTicketsRaw = localStorage.getItem('hatoGrandeTickets');
-            if (storedTicketsRaw) {
-                const storedTickets = JSON.parse(storedTicketsRaw);
-                const mappedTickets: Ticket[] = storedTickets.map((t: any, index: number) => ({
-                    id: `CP-${String(storedTickets.length - index).padStart(5, '0')}`,
-                    fechaCreacion: new Date(t.timestamp).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }),
-                    cliente: t.name,
-                    tipo: t.type === 'reclamo' ? 'Reclamacion' : (t.type.charAt(0).toUpperCase() + t.type.slice(1)),
-                    area: 'Comercial', // Default area
-                    prioridad: (t.type === 'reclamo' || t.type === 'queja') ? 'Alta' : 'Baja',
-                    estado: t.status,
-                    fechaRespuesta: t.status === 'Cerrado' ? new Date(new Date(t.timestamp).getTime() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES') : undefined,
-                    message: t.message, email: t.email, phone: t.phone, city: t.city, originalId: t.id,
-                })).sort((a, b) => parseInt(b.id.split('-')[1]) - parseInt(a.id.split('-')[1]));
-                setAllTickets(mappedTickets);
-            }
-        } catch (error) {
-            console.error("Failed to load tickets from localStorage", error);
-        }
+        const loadAssociatedData = () => {
+            // Load Tickets
+            try {
+                const storedTicketsRaw = localStorage.getItem('hatoGrandeTickets');
+                if (storedTicketsRaw) {
+                    const storedTickets = JSON.parse(storedTicketsRaw);
+                    const mappedTickets: Ticket[] = storedTickets.map((t: any, index: number) => ({
+                        id: `CP-${String(storedTickets.length - index).padStart(5, '0')}`,
+                        fechaCreacion: new Date(t.timestamp).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+                        cliente: t.name,
+                        tipo: t.type === 'reclamo' ? 'Reclamacion' : (t.type.charAt(0).toUpperCase() + t.type.slice(1)),
+                        area: 'Comercial', priority: (t.type === 'reclamo' || t.type === 'queja') ? 'Alta' : 'Baja',
+                        estado: t.status,
+                        fechaRespuesta: t.status === 'Cerrado' ? new Date(new Date(t.timestamp).getTime() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES') : undefined,
+                        message: t.message, email: t.email, phone: t.phone, city: t.city, originalId: t.id,
+                    })).sort((a, b) => parseInt(b.id.split('-')[1]) - parseInt(a.id.split('-')[1]));
+                    setAllTickets(mappedTickets);
+                }
+            } catch (error) { console.error("Failed to load tickets", error); }
+
+            // Load Movements
+            try {
+                const storedMovimientosRaw = localStorage.getItem(TERCEROS_MOVIMIENTOS_KEY);
+                setAllMovimientos(storedMovimientosRaw ? JSON.parse(storedMovimientosRaw) : []);
+            } catch (error) { console.error("Failed to load movements", error); }
+        };
+
+        loadAssociatedData();
+        window.addEventListener('storage', loadAssociatedData);
+        return () => window.removeEventListener('storage', loadAssociatedData);
     }, []);
 
 
@@ -248,6 +270,20 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
         const { name, checked } = e.target;
         setFormData(prev => ({ ...prev, [name]: checked }));
     };
+
+    const loadCustomerData = (tercero: Tercero) => {
+        // Tickets
+        const ticketsForCustomer = allTickets.filter(
+            ticket => ticket.cliente.toLowerCase() === tercero.nombre.toLowerCase() || ticket.email === tercero.email
+        );
+        setCustomerTickets(ticketsForCustomer);
+        // Movements
+        const movimientosForCustomer = allMovimientos.filter(
+            mov => mov.terceroId === tercero.nit
+        ).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+        setCustomerMovimientos(movimientosForCustomer);
+    };
+
 
     const handleSearch = () => {
         const { nombre, email, telefono, nit } = formData;
@@ -278,10 +314,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
                 esProveedor: foundTercero.tipo === 'Proveedor' || foundTercero.tipo === 'Ambos',
             });
             showNotification("Tercero encontrado.", 'success');
-            const ticketsForCustomer = allTickets.filter(
-                ticket => ticket.cliente.toLowerCase() === foundTercero.nombre.toLowerCase()
-            );
-            setCustomerTickets(ticketsForCustomer);
+            loadCustomerData(foundTercero);
         } else {
             if (window.confirm('Tercero no encontrado. ¿Desea crearlo con la información ingresada?')) {
                 showNotification("Puede completar los datos y guardar el nuevo tercero.", 'success');
@@ -289,6 +322,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
                 showNotification("Tercero no encontrado. Puede registrarlo o intentar una nueva búsqueda.", 'error');
             }
             setCustomerTickets([]);
+            setCustomerMovimientos([]);
         }
     };
     
@@ -339,6 +373,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
         });
         showNotification("Formulario limpiado.", 'success');
         setCustomerTickets([]);
+        setCustomerMovimientos([]);
     };
     
     const handleCreatePedido = () => {
@@ -371,10 +406,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
             esCliente: tercero.tipo === 'Cliente' || tercero.tipo === 'Ambos',
             esProveedor: tercero.tipo === 'Proveedor' || tercero.tipo === 'Ambos',
         });
-        const ticketsForCustomer = allTickets.filter(
-            ticket => ticket.cliente.toLowerCase() === tercero.nombre.toLowerCase()
-        );
-        setCustomerTickets(ticketsForCustomer);
+        loadCustomerData(tercero);
         setIsListModalOpen(false);
         showNotification(`${tercero.nombre} seleccionado.`, 'success');
     };
@@ -388,8 +420,10 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
         }
     };
     
-    const tableHeaders = ['No. Ticket', 'F. Creacion', 'Tipo', 'Area', 'Prioridad', 'Estado', 'F. Respuesta'];
-    
+    const ticketsTableHeaders = ['No. Ticket', 'F. Creacion', 'Tipo', 'Area', 'Prioridad', 'Estado', 'F. Respuesta'];
+    const movimientosTableHeaders = ['Fecha', 'Tipo', 'Documento', 'Monto'];
+    const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
+
     return (
         <div className="p-2 space-y-4 h-full flex flex-col text-[var(--text-primary)]">
             <TercerosListModal isOpen={isListModalOpen} onClose={() => setIsListModalOpen(false)} onSelect={handleSelectTerceroFromList} terceros={terceros} />
@@ -457,23 +491,41 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
                 </div>
                 <div className="flex-grow p-4 border border-[var(--border-color)] rounded-b-2xl rounded-tr-2xl bg-[var(--bg-card)] min-h-0">
                      <style>{`
-                        .ticket-table tbody td { border-right: 1px dotted var(--border-color); padding: 0.5rem; }
-                        .ticket-table tbody td:last-child { border-right: none; }
-                        .ticket-table thead th { padding: 0.5rem; border-right: 1px solid var(--border-color); }
-                        .ticket-table thead th:last-child { border-right: none; }
-                        .ticket-table tbody tr:not(:last-child) { border-bottom: 1px solid var(--border-color); }
+                        .data-table tbody td { border-right: 1px dotted var(--border-color); padding: 0.5rem; }
+                        .data-table tbody td:last-child { border-right: none; }
+                        .data-table thead th { padding: 0.5rem; border-right: 1px solid var(--border-color); }
+                        .data-table thead th:last-child { border-right: none; }
+                        .data-table tbody tr:not(:last-child) { border-bottom: 1px solid var(--border-color); }
                     `}</style>
                     {activeTab === 'movimientos' && (
-                         <div className="flex flex-col h-full items-center justify-center">
-                            <p className="text-[var(--text-secondary)]">No hay datos de movimientos disponibles.</p>
+                        <div className="flex flex-col h-full">
+                            <div className="flex-grow overflow-y-auto">
+                                <table className="w-full text-sm border-collapse data-table min-w-[700px]">
+                                    <thead className="bg-[var(--bg-main)] text-left sticky top-0">
+                                        <tr>{movimientosTableHeaders.map((h) => <th key={h} className="font-bold">{h}</th>)}</tr>
+                                    </thead>
+                                    <tbody>
+                                        {customerMovimientos.length > 0 ? customerMovimientos.map(mov => (
+                                            <tr key={mov.id} className="hover:bg-[var(--bg-main)]">
+                                                <td>{new Date(mov.fecha).toLocaleDateString('es-CO')}</td>
+                                                <td>{mov.tipo}</td>
+                                                <td>{mov.documentoId}</td>
+                                                <td className="text-right">{formatCurrency(mov.monto)}</td>
+                                            </tr>
+                                        )) : (
+                                            <tr><td colSpan={movimientosTableHeaders.length} className="text-center p-8 text-[var(--text-secondary)]">No hay movimientos para este tercero.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     )}
                      {activeTab === 'tickets' && (
                         <div className="flex flex-col h-full">
                             <div className="flex-grow overflow-y-auto">
-                                <table className="w-full text-sm border-collapse ticket-table min-w-[700px]">
+                                <table className="w-full text-sm border-collapse data-table min-w-[700px]">
                                     <thead className="bg-[var(--bg-main)] text-left sticky top-0">
-                                        <tr>{tableHeaders.map((h) => <th key={h} className="font-bold">{h}</th>)}</tr>
+                                        <tr>{ticketsTableHeaders.map((h) => <th key={h} className="font-bold">{h}</th>)}</tr>
                                     </thead>
                                     <tbody>
                                         {customerTickets.length > 0 ? customerTickets.map(ticket => (
@@ -483,7 +535,7 @@ const ClientesCRM: React.FC<ClientesCRMProps> = ({ permissions, terceros, onSave
                                                 <td>{ticket.fechaRespuesta || ''}</td>
                                             </tr>
                                         )) : (
-                                            <tr><td colSpan={tableHeaders.length} className="text-center p-8 text-[var(--text-secondary)]">No hay tickets asociados a este tercero.</td></tr>
+                                            <tr><td colSpan={ticketsTableHeaders.length} className="text-center p-8 text-[var(--text-secondary)]">No hay tickets asociados a este tercero.</td></tr>
                                         )}
                                     </tbody>
                                 </table>

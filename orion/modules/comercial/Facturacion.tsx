@@ -1,17 +1,36 @@
-
 import React, { useState, useEffect } from 'react';
+import { OrionUser } from '../../data/internalUsers';
+import { OrionProduct } from '../operaciones/Inventario';
 
 // --- ICONS ---
-const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>);
 const CancelIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>);
 const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>);
+const SpinnerIcon = () => (<svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>);
 
 interface FacturacionProps {
     order?: any; // The order data passed from CrearPedido
     onClose?: () => void;
 }
 
-const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
+const HATO_GRANDE_PEDIDOS_KEY = 'hatoGrandePedidos';
+const ORION_PRODUCTS_STORAGE_KEY = 'orionProducts';
+const CUENTAS_COBRAR_STORAGE_KEY = 'orionCuentasCobrar';
+const FACTURAS_STORAGE_KEY = 'orionFacturas';
+const FACTURA_CONSECUTIVO_KEY = 'orionFacturaConsecutivo';
+const TERCEROS_MOVIMIENTOS_KEY = 'orionTercerosMovimientos';
+
+
+const getNewFacturaId = () => {
+    let lastId = parseInt(localStorage.getItem(FACTURA_CONSECUTIVO_KEY) || '0', 10);
+    lastId++;
+    localStorage.setItem(FACTURA_CONSECUTIVO_KEY, lastId.toString());
+    return `FAC-${String(lastId).padStart(3, '0')}`;
+};
+
+const Facturacion: React.FC<FacturacionProps> = ({ order, onClose = () => {} }) => {
+    const [facturaId, setFacturaId] = useState('');
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     
     const [descuento, setDescuento] = useState({ percentage: 0, value: 0 });
     const [iva, setIva] = useState({ percentage: 0, value: 0 });
@@ -20,27 +39,24 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
 
     const subtotal = order?.subtotal || 0;
 
-    // Initialize state from the passed order prop
     useEffect(() => {
         if (order) {
+            setFacturaId(getNewFacturaId());
             const initialDiscountValue = order.discount || 0;
             const initialDiscountPercentage = subtotal > 0 ? parseFloat(((initialDiscountValue / subtotal) * 100).toFixed(2)) : 0;
             setDescuento({ percentage: initialDiscountPercentage, value: initialDiscountValue });
         }
     }, [order, subtotal]);
 
-    // Recalculate everything when a percentage changes or subtotal changes
     useEffect(() => {
         const descuentoValue = subtotal * (descuento.percentage / 100);
         const ivaValue = subtotal * (iva.percentage / 100);
         const retencionValue = subtotal * (retencion.percentage / 100);
 
-        // This ensures the value in state is always in sync with the percentage
         setDescuento(d => ({ ...d, value: descuentoValue }));
         setIva(i => ({ ...i, value: ivaValue }));
         setRetencion(r => ({ ...r, value: retencionValue }));
 
-        // Standard calculation: Subtotal - Discount + IVA - Withholding
         setTotal(subtotal - descuentoValue + ivaValue - retencionValue);
     }, [descuento.percentage, iva.percentage, retencion.percentage, subtotal]);
 
@@ -48,15 +64,131 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
         e: React.ChangeEvent<HTMLInputElement>,
         setter: React.Dispatch<React.SetStateAction<{ percentage: number; value: number }>>
     ) => {
-        // Allow floating point numbers, default to 0 if input is invalid
         const percentage = parseFloat(e.target.value) || 0;
         setter(prev => ({ ...prev, percentage }));
     };
+
+    const handleCancel = () => {
+        // Find the order and update its status back to "En Proceso"
+        try {
+            const storedPedidos = JSON.parse(localStorage.getItem(HATO_GRANDE_PEDIDOS_KEY) || '[]');
+            const updatedPedidos = storedPedidos.map((p: any) => {
+                if (p.id === order.id) {
+                    return { ...p, status: 'En Proceso' };
+                }
+                return p;
+            });
+            localStorage.setItem(HATO_GRANDE_PEDIDOS_KEY, JSON.stringify(updatedPedidos));
+            window.dispatchEvent(new Event("storage"));
+        } catch (error) {
+            console.error("Failed to update order status on cancel", error);
+        }
+        onClose();
+    };
+    
+    const handleConfirm = () => {
+        if (!order) return;
+        setIsProcessing(true);
+
+        setTimeout(() => { // Simulate async operations
+            try {
+                // 1. Update Order Status
+                const storedPedidos = JSON.parse(localStorage.getItem(HATO_GRANDE_PEDIDOS_KEY) || '[]');
+                const updatedPedidos = storedPedidos.map((p: any) => p.id === order.id ? { ...p, status: 'Facturado' } : p);
+                localStorage.setItem(HATO_GRANDE_PEDIDOS_KEY, JSON.stringify(updatedPedidos));
+
+                // 2. Update Inventory
+                const storedProducts: OrionProduct[] = JSON.parse(localStorage.getItem(ORION_PRODUCTS_STORAGE_KEY) || '[]');
+                order.items.forEach((item: any) => {
+                    const productIndex = storedProducts.findIndex(p => p.id === item.productId.toString());
+                    if (productIndex > -1) {
+                        storedProducts[productIndex].cantidad -= item.quantity;
+                    }
+                });
+                localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(storedProducts));
+
+                const facturaData = {
+                    id: facturaId,
+                    orderId: order.id,
+                    fecha: new Date().toISOString(),
+                    clienteNombre: order.clientName,
+                    clienteNit: order.clientNit,
+                    items: order.items,
+                    subtotal: subtotal,
+                    descuento: descuento.value,
+                    iva: iva.value,
+                    retencion: retencion.value,
+                    total: total,
+                };
+
+                // 3. Create Invoice Record
+                const storedFacturas = JSON.parse(localStorage.getItem(FACTURAS_STORAGE_KEY) || '[]');
+                storedFacturas.push(facturaData);
+                localStorage.setItem(FACTURAS_STORAGE_KEY, JSON.stringify(storedFacturas));
+
+                // 4. Update Accounts Receivable if credit
+                if (order.paymentMethod === 'Crédito') {
+                    const storedCuentasCobrar = JSON.parse(localStorage.getItem(CUENTAS_COBRAR_STORAGE_KEY) || '[]');
+                    const fechaVencimiento = new Date();
+                    fechaVencimiento.setDate(fechaVencimiento.getDate() + 30); // 30-day credit
+                    const newCuenta = {
+                        id: `CXC-${facturaId}`,
+                        facturaId: facturaId,
+                        clienteNit: order.clientNit,
+                        clienteNombre: order.clientName,
+                        clienteTelefono: order.clientPhone,
+                        ciudad: order.clientAddress.split(',')[1]?.trim() || 'N/A',
+                        fechaEmision: new Date().toISOString(),
+                        fechaVencimiento: fechaVencimiento.toISOString(),
+                        valorFactura: total,
+                        saldo: total,
+                    };
+                    storedCuentasCobrar.push(newCuenta);
+                    localStorage.setItem(CUENTAS_COBRAR_STORAGE_KEY, JSON.stringify(storedCuentasCobrar));
+                }
+
+                // 5. Update Terceros movements
+                const storedMovimientos = JSON.parse(localStorage.getItem(TERCEROS_MOVIMIENTOS_KEY) || '[]');
+                const newMovimiento = {
+                    id: `MOV-${Date.now()}`,
+                    terceroId: order.clientNit, // Assuming NIT is the unique ID for a client
+                    fecha: new Date().toISOString(),
+                    tipo: 'Factura',
+                    documentoId: facturaId,
+                    monto: total,
+                };
+                storedMovimientos.push(newMovimiento);
+                localStorage.setItem(TERCEROS_MOVIMIENTOS_KEY, JSON.stringify(storedMovimientos));
+
+                // Notify all modules
+                window.dispatchEvent(new Event("storage"));
+                
+            } catch(error) {
+                console.error("Error confirming invoice:", error);
+                alert("Ocurrió un error al procesar la factura.");
+            } finally {
+                setIsProcessing(false);
+                setIsSuccess(true);
+            }
+        }, 1500); // Simulate network delay
+    };
+
 
     const formatDate = (isoString?: string) => {
         if (!isoString) return new Date().toLocaleDateString('es-CO');
         return new Date(isoString).toLocaleDateString('es-CO');
     };
+    
+    if (isSuccess) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-[var(--bg-card)] text-[var(--text-primary)]">
+                <CheckIcon className="w-20 h-20 text-green-500 mb-4" strokeWidth={1.5} />
+                <h2 className="text-2xl font-bold">Factura {facturaId} Confirmada</h2>
+                <p className="mt-2">La factura se ha procesado exitosamente y los módulos correspondientes han sido actualizados.</p>
+                <button onClick={onClose} className="mt-6 px-6 py-2 bg-[var(--bg-main)] font-semibold rounded-lg hover:opacity-80 border border-[var(--border-color)]">Cerrar</button>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full flex flex-col bg-[var(--bg-card)] text-[var(--text-primary)] p-4 font-sans text-sm">
@@ -76,11 +208,12 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
             <div className="factura-container rounded-lg shadow-lg p-5 flex-grow flex flex-col">
                 {/* Header */}
                 <div className="factura-header flex justify-between items-center p-3 rounded-t-lg">
-                    <h2 className="text-xl font-bold">Factura No. {order?.id?.replace('CO', 'FAC') || 'XXX-000'}</h2>
+                    <h2 className="text-xl font-bold">Factura No. {facturaId}</h2>
                     <div className="flex items-center gap-2">
-                        <button className="p-2 bg-gray-600 rounded-full hover:bg-gray-700 transition-colors"><SearchIcon /></button>
-                        <button className="p-2 bg-red-600 rounded-full hover:bg-red-700 transition-colors"><CancelIcon /></button>
-                        <button className="p-2 bg-green-600 rounded-full hover:bg-green-700 transition-colors"><CheckIcon /></button>
+                        <button onClick={handleCancel} disabled={isProcessing} className="p-2 bg-red-600 rounded-full hover:bg-red-700 transition-colors disabled:opacity-50" title="Cancelar Factura"><CancelIcon /></button>
+                        <button onClick={handleConfirm} disabled={isProcessing} className="p-2 bg-green-600 rounded-full hover:bg-green-700 transition-colors w-10 h-10 flex items-center justify-center disabled:opacity-50" title="Confirmar Factura">
+                            {isProcessing ? <SpinnerIcon/> : <CheckIcon />}
+                        </button>
                     </div>
                 </div>
 
@@ -124,8 +257,8 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose }) => {
 
                         <div className="flex items-center gap-4 md:col-span-1">
                              <label className="font-semibold">Tipo de pago:</label>
-                             <label className="flex items-center gap-1"><input type="checkbox" checked={order?.paymentMethod?.toLowerCase().includes('crédito')} readOnly /> Crédito</label>
-                             <label className="flex items-center gap-1"><input type="checkbox" checked={!order?.paymentMethod?.toLowerCase().includes('crédito')} readOnly /> Contado</label>
+                             <label className="flex items-center gap-1"><input type="checkbox" checked={order?.paymentMethod?.toLowerCase() === 'crédito'} readOnly /> Crédito</label>
+                             <label className="flex items-center gap-1"><input type="checkbox" checked={order?.paymentMethod?.toLowerCase() === 'contado'} readOnly /> Contado</label>
                         </div>
                          <div className="md:col-span-2">
                             <label className="font-semibold block mb-1">Orden de Pedido:</label>

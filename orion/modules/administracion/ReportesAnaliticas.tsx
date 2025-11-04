@@ -28,7 +28,6 @@ interface Ticket {
     id: string; 
     estado: 'Abierto' | 'En proceso' | 'Cerrado';
     tipo: 'Queja' | 'Peticion' | 'Sugerencia' | 'Reclamacion' | 'Otros';
-    // FIX: Add creationDate property to match the data structure created during data loading.
     creationDate: string;
 }
 
