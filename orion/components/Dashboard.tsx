@@ -129,8 +129,9 @@ const ModuleContent: React.FC<{
     permissions?: Record<string, boolean>;
     winId?: string;
     orionProducts?: OrionProduct[];
+    orionInsumos?: OrionInsumo[];
     [key: string]: any; // To allow passing arbitrary props
-}> = ({ title, onClose = () => {}, permissions, winId, orionProducts, ...props }) => {
+}> = ({ title, onClose = () => {}, permissions, winId, orionProducts, orionInsumos, ...props }) => {
     switch (title) {
         case 'Terceros (CRM)': return <ClientesCRM permissions={permissions} terceros={props.terceros} onSave={props.onSaveTercero} />;
         case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
@@ -147,16 +148,16 @@ const ModuleContent: React.FC<{
         case 'Nuevo Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
         case 'Editar Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
         
-        case 'Inventario': return <Inventario permissions={permissions} products={props.orionProducts} insumos={props.orionInsumos} />;
+        case 'Inventario': return <Inventario permissions={permissions} products={orionProducts} insumos={orionInsumos} />;
         case 'Anadir Producto': return <AnadirProducto onClose={onClose} onAddProduct={props.onAddProduct} />;
-        case 'Compras': return <Compras permissions={permissions} allInsumos={props.orionInsumos} proveedores={props.proveedores} />;
+        case 'Compras': return <Compras permissions={permissions} allInsumos={orionInsumos} proveedores={props.proveedores} />;
         // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
-        case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
-        case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
-        case 'Producción': return <Produccion permissions={permissions} allProducts={props.orionProducts} allInsumos={props.orionInsumos} />;
+        case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
+        case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
+        case 'Producción': return <Produccion permissions={permissions} allProducts={orionProducts} allInsumos={orionInsumos} />;
         // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
-        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={null} {...props} />;
-        case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={props.ordenToEdit} />;
+        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={orionProducts} allInsumos={orionInsumos} ordenToEdit={null} {...props} />;
+        case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={orionProducts} allInsumos={orionInsumos} ordenToEdit={props.ordenToEdit} />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
         case 'Gestión de Usuarios': return <GestionUsuarios users={props.users} onDeleteSuccess={props.onDeleteSuccess} permissions={permissions} />;
