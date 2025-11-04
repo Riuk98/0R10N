@@ -1,20 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { UnifiedProduct } from '../../data/inventoryData';
 
 // --- TYPE DEFINITION ---
-export interface OrionProduct {
-    id: string; // The unique code from the form
-    codigo: string;
-    nombre: string;
-    cantidad: number;
-    valorUnitario: number;
-    categoria: string;
-    fechaLote: string;
-    fechaVencimiento: string;
-    stockMin: number;
-    stockMax: number;
-}
-
 export interface OrionInsumo {
     id: string;
     nombre: string;
@@ -61,7 +49,7 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 interface InventarioProps {
     permissions?: Record<string, boolean>;
-    products: OrionProduct[];
+    products: UnifiedProduct[];
     insumos: OrionInsumo[];
 }
 

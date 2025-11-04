@@ -1,4 +1,5 @@
 import React, { createContext, useContext } from 'react';
+import { UnifiedProduct } from '../../orion/data/inventoryData';
 
 export type Page = 'home' | 'products' | 'contact' | 'about' | 'login' | 'cart' | 'checkout' | 'account' | 'dashboard' | 'orion-login' | 'product-detail';
 
@@ -11,7 +12,7 @@ export interface User {
 }
 
 export interface CartItem {
-    id: number;
+    id: number | string;
     variantId: string; // e.g., '1-500g'
     name: string;
     price: number;
@@ -35,6 +36,7 @@ interface AppContextType {
     setIsCartOpen: (isOpen: boolean) => void;
     showProductDetail: (product: any) => void;
     clearCart: () => void;
+    products: UnifiedProduct[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

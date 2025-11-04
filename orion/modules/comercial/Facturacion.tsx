@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { OrionUser } from '../../data/internalUsers';
-import { OrionProduct } from '../operaciones/Inventario';
+import { UnifiedProduct } from '../../data/inventoryData';
 
 // --- ICONS ---
 const CancelIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>);
@@ -10,10 +10,10 @@ const SpinnerIcon = () => (<svg className="animate-spin h-5 w-5 text-white" xmln
 interface FacturacionProps {
     order?: any; // The order data passed from CrearPedido
     onClose?: () => void;
+    onUpdateProductStock: (productId: string, quantityChange: number) => void;
 }
 
 const HATO_GRANDE_PEDIDOS_KEY = 'hatoGrandePedidos';
-const ORION_PRODUCTS_STORAGE_KEY = 'orionProducts';
 const CUENTAS_COBRAR_STORAGE_KEY = 'orionCuentasCobrar';
 const FACTURAS_STORAGE_KEY = 'orionFacturas';
 const FACTURA_CONSECUTIVO_KEY = 'orionFacturaConsecutivo';
@@ -27,7 +27,7 @@ const getNewFacturaId = () => {
     return `FAC-${String(lastId).padStart(3, '0')}`;
 };
 
-const Facturacion: React.FC<FacturacionProps> = ({ order, onClose = () => {} }) => {
+const Facturacion: React.FC<FacturacionProps> = ({ order, onClose = () => {}, onUpdateProductStock }) => {
     const [facturaId, setFacturaId] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -97,15 +97,11 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose = () => {} }) 
                 const updatedPedidos = storedPedidos.map((p: any) => p.id === order.id ? { ...p, status: 'Facturado' } : p);
                 localStorage.setItem(HATO_GRANDE_PEDIDOS_KEY, JSON.stringify(updatedPedidos));
 
-                // 2. Update Inventory
-                const storedProducts: OrionProduct[] = JSON.parse(localStorage.getItem(ORION_PRODUCTS_STORAGE_KEY) || '[]');
+                // 2. Update Inventory by calling the central handler
                 order.items.forEach((item: any) => {
-                    const productIndex = storedProducts.findIndex(p => p.id === item.productId.toString());
-                    if (productIndex > -1) {
-                        storedProducts[productIndex].cantidad -= item.quantity;
-                    }
+                    // productID in the order is a string like "QCP-500"
+                    onUpdateProductStock(item.productId, -item.quantity);
                 });
-                localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(storedProducts));
 
                 const facturaData = {
                     id: facturaId,

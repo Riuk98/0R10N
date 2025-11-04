@@ -1,12 +1,8 @@
-
-
-
-
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { OrionUser } from '../../data/internalUsers';
-import { OrionProduct, OrionInsumo } from './Inventario';
+// FIX: Changed import for OrionInsumo to point to its definition file.
+import { UnifiedProduct } from '../../data/inventoryData';
+import { OrionInsumo } from './Inventario';
 
 // --- DATA STRUCTURES & MOCKS ---
 export interface InsumoRequerido {
@@ -25,7 +21,6 @@ export interface OrdenProduccion {
     fechaFin?: string; // 'YYYY-MM-DD'
     insumosRequeridos: InsumoRequerido[];
     estado: 'Planeada' | 'En Proceso' | 'Control de Calidad' | 'Finalizada';
-    // FIX: Make 'observaciones' required to ensure data consistency and resolve type mismatch.
     observaciones: string;
     creadoPor: string;
 }
@@ -52,11 +47,12 @@ const getNewOPId = () => {
 interface OrdenProduccionFormProps {
     onClose: () => void;
     ordenToEdit: OrdenProduccion | null;
-    allProducts: OrionProduct[];
+    allProducts: UnifiedProduct[];
     allInsumos: OrionInsumo[];
-    productToMake?: OrionProduct;
+    onUpdateProductStock: (productId: string, quantityChange: number) => void;
+    productToMake?: UnifiedProduct;
 }
-export const OrdenProduccionForm: React.FC<OrdenProduccionFormProps> = ({ onClose, ordenToEdit, allProducts, allInsumos, productToMake }) => {
+export const OrdenProduccionForm: React.FC<OrdenProduccionFormProps> = ({ onClose, ordenToEdit, allProducts, allInsumos, onUpdateProductStock, productToMake }) => {
     const isEditMode = !!ordenToEdit;
     const initialFormState = {
         productoId: '', productoNombre: '', cantidad: 100, fechaInicio: new Date().toISOString().split('T')[0], estado: 'Planeada' as OrdenProduccion['estado'],
@@ -107,6 +103,14 @@ export const OrdenProduccionForm: React.FC<OrdenProduccionFormProps> = ({ onClos
 
         const finalOrden: OrdenProduccion = { ...orden, id: ordenId, creadoPor: userName };
         
+        // Check if status is changing to 'Finalizada' to update stock
+        const isNowFinalizada = finalOrden.estado === 'Finalizada';
+        const wasPreviouslyFinalizada = isEditMode && ordenToEdit?.estado === 'Finalizada';
+
+        if (isNowFinalizada && !wasPreviouslyFinalizada) {
+            onUpdateProductStock(finalOrden.productoId, finalOrden.cantidad);
+        }
+
         try {
             const storedData = JSON.parse(localStorage.getItem(PRODUCCION_STORAGE_KEY) || '[]');
             const isUpdating = storedData.some((o: OrdenProduccion) => o.id === finalOrden.id);
@@ -175,11 +179,12 @@ export const OrdenProduccionForm: React.FC<OrdenProduccionFormProps> = ({ onClos
 // --- MAIN COMPONENT ---
 interface ProduccionProps {
     permissions?: Record<string, boolean>;
-    allProducts: OrionProduct[];
+    allProducts: UnifiedProduct[];
     allInsumos: OrionInsumo[];
+    onUpdateProductStock: (productId: string, quantityChange: number) => void;
 }
 
-const Produccion: React.FC<ProduccionProps> = ({ permissions, allProducts, allInsumos }) => {
+const Produccion: React.FC<ProduccionProps> = ({ permissions, allProducts, allInsumos, onUpdateProductStock }) => {
     const [ordenes, setOrdenes] = useState<OrdenProduccion[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -191,9 +196,9 @@ const Produccion: React.FC<ProduccionProps> = ({ permissions, allProducts, allIn
                     setOrdenes(JSON.parse(stored));
                 } else {
                     const initial: OrdenProduccion[] = [
-                        { id: 'OP-0234', productoId: 'QCP-500', productoNombre: 'Queso Campesino 500g', cantidad: 500, fechaInicio: '2024-07-28', estado: 'En Proceso', insumosRequeridos: [], creadoPor: 'Juan Logistica', observaciones: '' },
-                        { id: 'OP-0235', productoId: 'YFR-1L', productoNombre: 'Yogur de Fresa 1L', cantidad: 300, fechaInicio: '2024-07-29', estado: 'Planeada', insumosRequeridos: [], creadoPor: 'Juan Logistica', observaciones: '' },
-                        { id: 'OP-0233', productoId: 'AQP-450', productoNombre: 'Arequipe 450g', cantidad: 400, fechaInicio: '2024-07-25', fechaFin: '2024-07-26', estado: 'Finalizada', insumosRequeridos: [], creadoPor: 'Juan Logistica', observaciones: '' },
+                        { id: 'OP-0234', productoId: 'QCP-500', productoNombre: 'Queso Campesino', cantidad: 500, fechaInicio: '2024-07-28', estado: 'En Proceso', insumosRequeridos: [], creadoPor: 'Juan Logistica', observaciones: '' },
+                        { id: 'OP-0235', productoId: 'YFR-1L', productoNombre: 'Yogur de Fresa', cantidad: 300, fechaInicio: '2024-07-29', estado: 'Planeada', insumosRequeridos: [], creadoPor: 'Juan Logistica', observaciones: '' },
+                        { id: 'OP-0233', productoId: 'AQP-450', productoNombre: 'Arequipe Hato Grande', cantidad: 400, fechaInicio: '2024-07-25', fechaFin: '2024-07-26', estado: 'Finalizada', insumosRequeridos: [], creadoPor: 'Juan Logistica', observaciones: '' },
                     ];
                     setOrdenes(initial);
                     localStorage.setItem(PRODUCCION_STORAGE_KEY, JSON.stringify(initial));
@@ -214,7 +219,10 @@ const Produccion: React.FC<ProduccionProps> = ({ permissions, allProducts, allIn
         window.dispatchEvent(new CustomEvent('createOrionWindow', {
             detail: {
                 title: orden ? 'Editar Orden de Producción' : 'Nueva Orden de Producción',
-                props: { ordenToEdit: orden }
+                props: { 
+                    ordenToEdit: orden,
+                    onUpdateProductStock, // Pass the handler to the form
+                }
             }
         }));
     };

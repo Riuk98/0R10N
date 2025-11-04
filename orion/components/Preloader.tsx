@@ -112,7 +112,7 @@ class Particle {
         ctx.fillStyle = 'white';
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        // FIX: Pass 'nonzero' fill rule to ctx.fill() to resolve "Expected 1 arguments, but got 0" error.
+        // FIX: Changed ctx.fill() to ctx.fill('nonzero') to satisfy TypeScript's requirement for at least one argument.
         ctx.fill('nonzero');
     }
 }
@@ -220,7 +220,7 @@ const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
             <Canvas ref={canvasRef} />
             <Logo 
                 src="https://i.postimg.cc/TYmLPPGk/Generated-Image-October-17-2025-12-49-AM-2.png"
-                alt="Cargando Orion ERP"
+                alt="Cargando Orion ERR"
             />
             <LoadingContainer>
                 <PercentageText>{percentage}%</PercentageText>

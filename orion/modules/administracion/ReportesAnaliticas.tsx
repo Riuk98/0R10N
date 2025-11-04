@@ -1,8 +1,7 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { products as hatoGrandeProducts } from '../../../hatogrande/data';
-import { OrionProduct } from '../operaciones/Inventario';
+// FIX: Removed import of 'products' from hatogrande/data as it's not exported there.
+// FIX: Replaced non-existent 'OrionProduct' with 'UnifiedProduct' and corrected the import path.
+import { UnifiedProduct } from '../../data/inventoryData';
 
 // --- TYPE DEFINITIONS ---
 interface KpiData {
@@ -20,7 +19,7 @@ interface OrionOrder {
     creationDate: string;
     total: number;
     items: {
-        productId: number;
+        productId: string; // Changed from number to string to match UnifiedProduct.id
         totalPrice: number;
     }[];
 }
@@ -28,7 +27,6 @@ interface Ticket {
     id: string; 
     estado: 'Abierto' | 'En proceso' | 'Cerrado';
     tipo: 'Queja' | 'Peticion' | 'Sugerencia' | 'Reclamacion' | 'Otros';
-    // FIX: Add creationDate property to match the data structure created during data loading.
     creationDate: string;
 }
 
@@ -181,7 +179,8 @@ const PlaceholderReportView: React.FC<{ reportName: string }> = ({ reportName })
 // --- MAIN COMPONENT ---
 const ReportesAnaliticas: React.FC = () => {
     const [allOrders, setAllOrders] = useState<OrionOrder[]>([]);
-    const [allProducts, setAllProducts] = useState<OrionProduct[]>([]);
+    // FIX: Changed OrionProduct to UnifiedProduct to match the actual data structure from localStorage.
+    const [allProducts, setAllProducts] = useState<UnifiedProduct[]>([]);
     const [allTickets, setAllTickets] = useState<Ticket[]>([]);
     
     const [selectedModule, setSelectedModule] = useState('');
@@ -275,10 +274,12 @@ const ReportesAnaliticas: React.FC = () => {
             const categorySales: { [key: string]: number } = {};
             filteredOrders.forEach(order => {
                 order.items.forEach(item => {
-                    const productInfo = hatoGrandeProducts.find(p => p.id === item.productId);
+                    // FIX: Use allProducts state which is loaded from localStorage, instead of the incorrect import.
+                    const productInfo = allProducts.find(p => p.id === item.productId);
                     if (productInfo) {
-                        if (!categorySales[productInfo.category]) categorySales[productInfo.category] = 0;
-                        categorySales[productInfo.category] += item.totalPrice;
+                        // FIX: Changed property from 'category' to 'categoria' to match UnifiedProduct interface.
+                        if (!categorySales[productInfo.categoria]) categorySales[productInfo.categoria] = 0;
+                        categorySales[productInfo.categoria] += item.totalPrice;
                     }
                 });
             });
@@ -320,7 +321,7 @@ const ReportesAnaliticas: React.FC = () => {
         }
 
         return null;
-    }, [selectedReport, dateRange, allOrders, allTickets]);
+    }, [selectedReport, dateRange, allOrders, allTickets, allProducts]);
 
     // --- UI LOGIC ---
     const reportOptions: Record<string, string[]> = {

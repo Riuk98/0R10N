@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useCallback, useEffect } from 'react';
 
 // Orion components
@@ -21,11 +19,13 @@ import Checkout from './hatogrande/pages/Checkout';
 import Account from './hatogrande/pages/Account';
 import ProductDetail from './hatogrande/pages/ProductDetail';
 
-
-// Context
+// Context & Data
 import { AppProvider, Page, User, CartItem } from './hatogrande/context/AppContext';
+import { UnifiedProduct, initialUnifiedProducts } from './orion/data/inventoryData';
 
 const USER_STORAGE_KEY = 'hatoGrandeClientes';
+const ORION_PRODUCTS_STORAGE_KEY = 'orionProducts';
+
 
 function App() {
     // Orion state
@@ -49,6 +49,24 @@ function App() {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+
+    // --- CENTRALIZED PRODUCT STATE ---
+    const [unifiedProducts, setUnifiedProducts] = useState<UnifiedProduct[]>([]);
+
+    useEffect(() => {
+        try {
+            const storedProducts = localStorage.getItem(ORION_PRODUCTS_STORAGE_KEY);
+            if (storedProducts) {
+                setUnifiedProducts(JSON.parse(storedProducts));
+            } else {
+                setUnifiedProducts(initialUnifiedProducts);
+                localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(initialUnifiedProducts));
+            }
+        } catch (error) {
+            console.error("Failed to load unified products", error);
+            setUnifiedProducts(initialUnifiedProducts);
+        }
+    }, []);
     
     // Effect to save users to localStorage whenever the list changes
     useEffect(() => {
@@ -92,6 +110,31 @@ function App() {
             setSelectedProduct(null);
         }
     }, []);
+
+    // --- UNIFIED PRODUCT HANDLERS ---
+    const handleAddProduct = (newProduct: UnifiedProduct) => {
+        setUnifiedProducts(prev => {
+            const newProducts = [...prev, newProduct];
+            localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(newProducts));
+            return newProducts;
+        });
+    };
+
+    const handleUpdateProductStock = (productId: string, quantityChange: number) => {
+        setUnifiedProducts(prev => {
+            const newProducts = prev.map(p => {
+                if (p.id === productId) {
+                    // Ensure stock doesn't go below zero
+                    const newQuantity = Math.max(0, p.cantidad + quantityChange);
+                    return { ...p, cantidad: newQuantity };
+                }
+                return p;
+            });
+            localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(newProducts));
+            return newProducts;
+        });
+    };
+
 
     // Auth logic for Hato Grande
     const login = useCallback(async (credentials: { email: string; password: string }): Promise<{ success: boolean; message?: string }> => {
@@ -201,10 +244,10 @@ function App() {
                     {
                         id: product.id,
                         variantId,
-                        name: product.name,
-                        price: product.price,
+                        name: product.nombre,
+                        price: product.valorUnitario,
                         quantity,
-                        category: product.category,
+                        category: product.categoria,
                         options,
                     },
                 ];
@@ -293,7 +336,7 @@ function App() {
         }
 
         if (isOrionLoggedIn) {
-            return <OrionDashboard onLogout={handleOrionLogout} />;
+            return <OrionDashboard onLogout={handleOrionLogout} unifiedProducts={unifiedProducts} onAddProduct={handleAddProduct} onUpdateProductStock={handleUpdateProductStock} />;
         }
         
         if (currentPage === 'orion-login') {
@@ -323,6 +366,7 @@ function App() {
         setIsCartOpen,
         showProductDetail,
         clearCart,
+        products: unifiedProducts,
     };
     
     const GlobalStyles =  `

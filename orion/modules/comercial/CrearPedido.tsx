@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { OrionProduct } from '../../modules/operaciones/Inventario';
+import { UnifiedProduct } from '../../data/inventoryData';
 import { Tercero } from './ClientesCRM';
 
 // --- ICONS ---
@@ -34,12 +34,12 @@ interface CrearPedidoProps {
     clientData?: any;
     clientes?: Tercero[];
     winId?: string;
-    orionProducts?: OrionProduct[];
+    orionProducts?: UnifiedProduct[];
 }
 
 interface OrderItem {
     id: number;
-    productId: number;
+    productId: string;
     productName: string;
     quantity: number;
     unitPrice: number;
@@ -308,7 +308,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
         setCurrentItem(newValues);
     };
 
-    const handleSelectProduct = (product: OrionProduct) => {
+    const handleSelectProduct = (product: UnifiedProduct) => {
         setCurrentItem({
             id: product.id,
             name: product.nombre,
@@ -343,7 +343,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
         setItems(prev => [...prev, {
             ...currentItem,
             id: Date.now(),
-            productId: parseInt(currentItem.id.replace(/\D/g, ''), 10),
+            productId: currentItem.id,
             productName: currentItem.name,
             totalPrice: currentItem.quantity * currentItem.unitPrice - currentItem.discount,
         }]);

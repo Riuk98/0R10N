@@ -1,16 +1,17 @@
 
 import React from 'react';
 import { useAppContext } from '../context/AppContext';
-import { products, testimonials } from '../data';
+import { testimonials } from '../data';
 import ProductIcon from '../components/ProductIcon';
+import { UnifiedProduct } from '../../orion/data/inventoryData';
 
-const ProductCard: React.FC<{ product: any; }> = ({ product }) => {
+const ProductCard: React.FC<{ product: UnifiedProduct; }> = ({ product }) => {
     const { showProductDetail } = useAppContext();
     return (
         <div className="bg-white rounded-lg shadow-lg overflow-hidden group transition-all duration-300 hover:shadow-2xl hover:-translate-y-2" onClick={() => showProductDetail(product)}>
              <div className="relative cursor-pointer bg-gray-100">
                 <div className="w-full h-56 flex items-center justify-center p-8">
-                    <ProductIcon category={product.category} className="w-full h-full" />
+                    <ProductIcon category={product.categoria} className="w-full h-full" />
                 </div>
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <span className="text-[var(--color-light-gray)] font-bold border-2 border-white px-4 py-2 rounded-full">Ver Detalle</span>
@@ -21,8 +22,8 @@ const ProductCard: React.FC<{ product: any; }> = ({ product }) => {
                 </div>
             </div>
             <div className="p-5">
-                <h3 className="text-lg font-semibold text-[var(--color-dark)] truncate">{product.name}</h3>
-                <p className="text-xl font-bold text-[var(--color-secondary)] mt-2">${product.price.toLocaleString('es-CO')}</p>
+                <h3 className="text-lg font-semibold text-[var(--color-dark)] truncate">{product.nombre}</h3>
+                <p className="text-xl font-bold text-[var(--color-secondary)] mt-2">${product.valorUnitario.toLocaleString('es-CO')}</p>
             </div>
         </div>
     );
@@ -30,7 +31,7 @@ const ProductCard: React.FC<{ product: any; }> = ({ product }) => {
 
 
 const Home: React.FC = () => {
-    const { navigateTo } = useAppContext();
+    const { navigateTo, products } = useAppContext();
 
     const bestsellers = products.filter(p => p.bestseller);
     const offers = products.filter(p => p.offer);

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Switch from './Switch'; // Import the new Switch component
+import { UnifiedProduct } from '../data/inventoryData';
 
 // --- TYPE DEFINITIONS ---
 interface WindowState {
@@ -30,7 +31,7 @@ import CuentasPagar from '../modules/financiero/CuentasPagar';
 import Contabilidad, { NuevoAsientoContableForm } from '../modules/financiero/Contabilidad';
 import Nomina from '../modules/financiero/Nomina';
 
-import Inventario, { OrionProduct, OrionInsumo } from '../modules/operaciones/Inventario';
+import Inventario, { OrionInsumo } from '../modules/operaciones/Inventario';
 import Compras, { OrdenCompraForm } from '../modules/operaciones/Compras';
 import Produccion, { OrdenProduccionForm } from '../modules/operaciones/Produccion';
 import AnadirProducto from '../modules/operaciones/AnadirProducto';
@@ -43,7 +44,7 @@ import RegistroUsuario from '../modules/administracion/RegistroUsuario';
 import GestionPermisos from '../modules/administracion/GestionPermisos';
 import { OrionUser, INTERNAL_USERS } from '../data/internalUsers';
 import { defaultPermissionsByRole } from '../data/permissions';
-import { initialProducts, initialInsumos } from '../data/inventoryData';
+import { initialInsumos } from '../data/inventoryData';
 import { initialTerceros } from '../data/tercerosData';
 
 
@@ -70,12 +71,6 @@ const Icons = {
     Admin: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>),
     ArrowLeft: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>),
     Trash: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>),
-    Pin: (props: React.SVGProps<SVGSVGElement>) => (
-        <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="17" x2="12" y2="22"></line>
-            <path d="M17 4.33V9l4 2-6 2v6H9v-6l-6-2 4-2V4.33C7 2.5 8.5 1 10.33 1h3.34C15.5 1 17 2.5 17 4.33z"></path>
-        </svg>
-    ),
     Close: (props: React.SVGProps<SVGSVGElement>) => (
         <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -131,9 +126,11 @@ const ModuleContent: React.FC<{
     onClose?: () => void;
     permissions?: Record<string, boolean>;
     winId?: string;
-    orionProducts?: OrionProduct[];
+    orionProducts?: UnifiedProduct[];
+    orionInsumos?: OrionInsumo[];
+    onUpdateProductStock: (productId: string, quantityChange: number) => void;
     [key: string]: any; // To allow passing arbitrary props
-}> = ({ title, onClose = () => {}, permissions, winId, orionProducts, ...props }) => {
+}> = ({ title, onClose = () => {}, permissions, winId, orionProducts, orionInsumos, onUpdateProductStock, ...props }) => {
     switch (title) {
         case 'Terceros (CRM)': return <ClientesCRM permissions={permissions} terceros={props.terceros} onSave={props.onSaveTercero} />;
         case 'Pedidos de Venta': return <PedidosVenta permissions={permissions} />;
@@ -141,7 +138,7 @@ const ModuleContent: React.FC<{
         case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} winId={winId} orionProducts={orionProducts} />;
         case 'Editar Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} winId={winId} orionProducts={orionProducts} />;
         case 'Generar Ticket': return <CrearTicket onClose={onClose} />;
-        case 'Facturación': return <Facturacion onClose={onClose} {...props} />;
+        case 'Facturación': return <Facturacion onClose={onClose} {...props} onUpdateProductStock={onUpdateProductStock} />;
 
         case 'Cuentas por Cobrar': return <CuentasCobrar />;
         case 'Cuentas por Pagar': return <CuentasPagar />;
@@ -150,16 +147,14 @@ const ModuleContent: React.FC<{
         case 'Nuevo Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
         case 'Editar Asiento Contable': return <NuevoAsientoContableForm onClose={onClose} {...props} />;
         
-        case 'Inventario': return <Inventario permissions={permissions} products={props.orionProducts} insumos={props.orionInsumos} />;
+        case 'Inventario': return <Inventario permissions={permissions} products={orionProducts} insumos={orionInsumos} />;
         case 'Anadir Producto': return <AnadirProducto onClose={onClose} onAddProduct={props.onAddProduct} />;
-        case 'Compras': return <Compras permissions={permissions} allInsumos={props.orionInsumos} proveedores={props.proveedores} />;
-        // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
-        case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
-        case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
-        case 'Producción': return <Produccion permissions={permissions} allProducts={props.orionProducts} allInsumos={props.orionInsumos} />;
-        // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
-        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={null} {...props} />;
-        case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={props.ordenToEdit} />;
+        case 'Compras': return <Compras permissions={permissions} allInsumos={orionInsumos} proveedores={props.proveedores} />;
+        case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
+        case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
+        case 'Producción': return <Produccion permissions={permissions} allProducts={orionProducts} allInsumos={orionInsumos} onUpdateProductStock={onUpdateProductStock} />;
+        case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={orionProducts} allInsumos={orionInsumos} ordenToEdit={null} onUpdateProductStock={onUpdateProductStock} {...props} />;
+        case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={orionProducts} allInsumos={orionInsumos} ordenToEdit={props.ordenToEdit} onUpdateProductStock={onUpdateProductStock} {...props} />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
         case 'Gestión de Usuarios': return <GestionUsuarios users={props.users} onDeleteSuccess={props.onDeleteSuccess} permissions={permissions} />;
@@ -187,9 +182,10 @@ const Window: React.FC<{
     onUpdateSuccess: (updatedUser: OrionUser) => void;
     onDeleteSuccess: (userId: number) => void;
     permissions?: Record<string, boolean>;
-    orionProducts: OrionProduct[];
+    orionProducts: UnifiedProduct[];
     orionInsumos: OrionInsumo[];
-    onAddProduct: (newProduct: OrionProduct) => void;
+    onAddProduct: (newProduct: UnifiedProduct) => void;
+    onUpdateProductStock: (productId: string, quantityChange: number) => void;
     terceros: Tercero[];
     onSaveTercero: (tercero: Tercero) => void;
     proveedores: Tercero[];
@@ -283,18 +279,19 @@ const Window: React.FC<{
 // --- MAIN DASHBOARD COMPONENT ---
 interface DashboardProps {
     onLogout: () => void;
+    unifiedProducts: UnifiedProduct[];
+    onAddProduct: (product: UnifiedProduct) => void;
+    onUpdateProductStock: (productId: string, quantityChange: number) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddProduct, onUpdateProductStock }) => {
     const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(true);
     const [isSidebarForceOpen, setSidebarForceOpen] = useState(false);
     const [isPartiallyCollapsed, setPartiallyCollapsed] = useState(false);
     const [openPillars, setOpenPillars] = useState<string[]>([]);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-    const [isSidebarPinned, setSidebarPinned] = useState(false); // For pinning the sidebar
     const userMenuRef = useRef<HTMLDivElement>(null);
-    const sidebarRef = useRef<HTMLElement>(null); // For click-outside detection
     const [currentTime, setCurrentTime] = useState('');
     const [windows, setWindows] = useState<WindowState[]>([]);
     const [windowToCloseId, setWindowToCloseId] = useState<string | null>(null);
@@ -305,13 +302,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     
     // Centralized Data States
     const [internalUsers, setInternalUsers] = useState<OrionUser[]>([]);
-    const [orionProducts, setOrionProducts] = useState<OrionProduct[]>([]);
     const [orionInsumos, setOrionInsumos] = useState<OrionInsumo[]>([]);
     const [terceros, setTerceros] = useState<Tercero[]>([]);
 
     
     const ORION_USERS_STORAGE_KEY = 'orionInternalUsers';
-    const ORION_PRODUCTS_STORAGE_KEY = 'orionProducts';
     const ORION_INSUMOS_STORAGE_KEY = 'orionInsumos';
     const TERCEROS_STORAGE_KEY = 'orionTerceros';
 
@@ -373,17 +368,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 localStorage.setItem(ORION_USERS_STORAGE_KEY, JSON.stringify(INTERNAL_USERS));
             }
         } catch (error) { console.error("Failed to manage Orion users", error); setInternalUsers(INTERNAL_USERS); }
-
-        // Load Products
-        try {
-            const storedProducts = localStorage.getItem(ORION_PRODUCTS_STORAGE_KEY);
-            if (storedProducts) {
-                setOrionProducts(JSON.parse(storedProducts));
-            } else {
-                setOrionProducts(initialProducts);
-                localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(initialProducts));
-            }
-        } catch (error) { console.error("Failed to manage Orion products", error); setOrionProducts(initialProducts); }
         
         // Load Insumos
         try {
@@ -437,12 +421,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         }
     };
 
-    const handleAddProduct = (newProduct: OrionProduct) => {
-        const updatedProducts = [...orionProducts, newProduct];
-        setOrionProducts(updatedProducts);
-        localStorage.setItem(ORION_PRODUCTS_STORAGE_KEY, JSON.stringify(updatedProducts));
-    };
-
     const handleSaveTercero = (terceroToSave: Tercero) => {
         const isUpdating = terceros.some(t => t.id === terceroToSave.id);
         const updatedTerceros = isUpdating
@@ -476,29 +454,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         return () => clearInterval(timer);
     }, []);
 
-    // Click outside user menu & sidebar
+    // Click outside user menu
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            // User menu
             if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
                 setUserMenuOpen(false);
-            }
-
-            // Sidebar collapse (only if not pinned)
-            if (isSidebarPinned || isSidebarForceOpen || isPartiallyCollapsed || isSidebarCollapsed) {
-                return;
-            }
-            const menuToggle = document.getElementById('menu-toggle');
-            if (menuToggle && menuToggle.contains(event.target as Node)) {
-                return;
-            }
-            if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
-                setPartiallyCollapsed(true);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isSidebarPinned, isSidebarForceOpen, isPartiallyCollapsed, isSidebarCollapsed]);
+    }, []);
 
     // Effect to manage initial load animation
     useEffect(() => {
@@ -522,8 +487,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         const togglePillar = () => {
             setOpenPillars(prevOpenPillars =>
                 prevOpenPillars.includes(title)
-                    ? [] // If it's already open, close it
-                    : [title] // Otherwise, open it and close others
+                    ? prevOpenPillars.filter(p => p !== title)
+                    : [...prevOpenPillars, title]
             );
         };
 
@@ -548,7 +513,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             )
         );
 
-
         if (existingWindow) {
             if (existingWindow.isMinimized) {
                 restoreWindow(existingWindow.id);
@@ -567,11 +531,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             isMaximized: false,
             zIndex: nextZIndex.current++,
             animationState: 'opening',
-            props,
+            props: {
+                ...props,
+                onAddProduct,
+                onUpdateProductStock,
+            },
         };
-        setWindows([...windows, newWindow]);
+        setWindows(prev => [...prev, newWindow]);
         focusWindow(newWindow.id);
-    }, [windows]);
+    }, [windows, onAddProduct, onUpdateProductStock]);
 
     useEffect(() => {
         const handleCreateWindow = (event: Event) => {
@@ -947,7 +915,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
             </header>
 
-            <aside className="sidebar" ref={sidebarRef}>
+            <aside className="sidebar">
                 <ul className="sidebar-nav">
                     {filteredNavData.map(pillar => (
                          <li key={pillar.title} className="nav-item">
@@ -969,10 +937,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     ))}
                 </ul>
                  <div className="sidebar-footer">
-                    <button onClick={() => setSidebarPinned(!isSidebarPinned)} title={isSidebarPinned ? "Desfijar menú" : "Fijar menú"}>
-                        <Icons.Pin className="w-5 h-5 flex-shrink-0" style={{ transition: 'transform 0.3s, color 0.3s', transform: isSidebarPinned ? 'rotate(45deg)' : 'none', color: isSidebarPinned ? 'var(--secondary-green)' : 'inherit' }} />
-                        <span>{isSidebarPinned ? 'Fijo' : 'Fijar'}</span>
-                    </button>
                     <button onClick={togglePartialCollapse} title="Contraer menú">
                         <Icons.ArrowLeft className="collapse-arrow w-5 h-5 flex-shrink-0" />
                         <span>Contraer</span>
@@ -1014,9 +978,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                                 onUpdateSuccess={handleUpdateUser} 
                                 onDeleteSuccess={handleDeleteUser}
                                 permissions={permissions}
-                                orionProducts={orionProducts}
+                                orionProducts={unifiedProducts}
                                 orionInsumos={orionInsumos}
-                                onAddProduct={handleAddProduct} 
+                                onAddProduct={onAddProduct}
+                                onUpdateProductStock={onUpdateProductStock}
                                 terceros={terceros}
                                 onSaveTercero={handleSaveTercero}
                                 proveedores={proveedores}

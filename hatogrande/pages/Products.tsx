@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { products, categories } from '../data';
+import { categories } from '../data';
 import { useAppContext } from '../context/AppContext';
 import ProductIcon from '../components/ProductIcon';
 
@@ -21,7 +21,7 @@ const ProductCard: React.FC<{ product: any }> = ({ product }) => {
         >
             <div className="relative cursor-pointer bg-gray-100" onClick={() => showProductDetail(product)}>
                  <div className="w-full h-56 flex items-center justify-center p-8">
-                    <ProductIcon category={product.category} className="w-full h-full" />
+                    <ProductIcon category={product.categoria} className="w-full h-full" />
                 </div>
                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                  <div className="absolute top-2 right-2 flex flex-col gap-2">
@@ -29,9 +29,9 @@ const ProductCard: React.FC<{ product: any }> = ({ product }) => {
                 </div>
             </div>
             <div className="p-5 flex flex-col flex-grow">
-                <h3 className="text-lg font-semibold text-[var(--color-dark)] group-hover:text-[var(--color-primary)] transition-colors underline-offset-4 group-hover:underline">{product.name}</h3>
+                <h3 className="text-lg font-semibold text-[var(--color-dark)] group-hover:text-[var(--color-primary)] transition-colors underline-offset-4 group-hover:underline">{product.nombre}</h3>
                 <p className="text-[var(--color-text)] opacity-80 text-sm mt-1">{product.options.type}: {product.options.values.join(', ')}</p>
-                <p className="text-xl font-bold text-[var(--color-secondary)] mt-4">${product.price.toLocaleString('es-CO')}</p>
+                <p className="text-xl font-bold text-[var(--color-secondary)] mt-4">${product.valorUnitario.toLocaleString('es-CO')}</p>
                 
                 <div className="mt-auto pt-4 flex items-center gap-2">
                      <button onClick={() => showProductDetail(product)} className="flex-1 text-center px-4 py-2 border-2 border-[var(--color-secondary)] text-[var(--color-secondary)] font-bold rounded hover:bg-[var(--color-secondary)] hover:text-[var(--color-light-gray)] transition-colors text-sm">
@@ -59,11 +59,12 @@ const ProductCard: React.FC<{ product: any }> = ({ product }) => {
 };
 
 const Products: React.FC = () => {
+    const { products } = useAppContext();
     const [activeCategory, setActiveCategory] = useState('todos');
 
     const filteredProducts = activeCategory === 'todos'
         ? products
-        : products.filter(p => p.category === activeCategory);
+        : products.filter(p => p.categoria === activeCategory);
 
     return (
         <div className="">

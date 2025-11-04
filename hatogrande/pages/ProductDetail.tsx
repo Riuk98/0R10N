@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { products } from '../data'; // For related products
 import ProductIcon from '../components/ProductIcon';
 
 interface ProductDetailProps {
@@ -8,7 +7,7 @@ interface ProductDetailProps {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
-    const { addToCart, navigateTo, showProductDetail } = useAppContext();
+    const { addToCart, navigateTo, showProductDetail, products } = useAppContext();
     const [quantity, setQuantity] = useState(1);
     const [selectedOption, setSelectedOption] = useState(product.options.values[0]);
     const [isAdded, setIsAdded] = useState(false);
@@ -19,7 +18,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
         setTimeout(() => setIsAdded(false), 2000);
     };
 
-    const relatedProducts = products.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
+    const relatedProducts = products.filter(p => p.categoria === product.categoria && p.id !== product.id).slice(0, 4);
 
     return (
         <div className="">
@@ -27,13 +26,13 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
                 <div className="grid md:grid-cols-2 gap-10 lg:gap-16 items-start">
                     {/* Product Image */}
                     <div className="bg-white p-4 rounded-lg shadow-lg flex items-center justify-center min-h-[300px]">
-                        <ProductIcon category={product.category} className="w-full h-auto max-w-sm max-h-96" />
+                        <ProductIcon category={product.categoria} className="w-full h-auto max-w-sm max-h-96" />
                     </div>
 
                     {/* Product Info */}
                     <div>
-                        <h1 className="text-3xl lg:text-4xl font-bold text-[var(--color-dark)] mb-3">{product.name}</h1>
-                        <p className="text-2xl font-bold text-[var(--color-secondary)] mb-5">${product.price.toLocaleString('es-CO')}</p>
+                        <h1 className="text-3xl lg:text-4xl font-bold text-[var(--color-dark)] mb-3">{product.nombre}</h1>
+                        <p className="text-2xl font-bold text-[var(--color-secondary)] mb-5">${product.valorUnitario.toLocaleString('es-CO')}</p>
                         <p className="text-[var(--color-text)] leading-relaxed mb-6">{product.description}</p>
 
                         {/* Options */}
@@ -94,12 +93,12 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
                                  <div key={related.id} className="bg-white rounded-lg shadow overflow-hidden group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer" onClick={() => showProductDetail(related)}>
                                     <div className="relative bg-gray-100">
                                         <div className="w-full h-40 flex items-center justify-center p-4">
-                                            <ProductIcon category={related.category} className="w-full h-full" />
+                                            <ProductIcon category={related.categoria} className="w-full h-full" />
                                         </div>
                                     </div>
                                     <div className="p-4">
-                                        <h3 className="text-sm font-semibold text-[var(--color-dark)] truncate">{related.name}</h3>
-                                        <p className="text-md font-bold text-[var(--color-secondary)] mt-1">${related.price.toLocaleString('es-CO')}</p>
+                                        <h3 className="text-sm font-semibold text-[var(--color-dark)] truncate">{related.nombre}</h3>
+                                        <p className="text-md font-bold text-[var(--color-secondary)] mt-1">${related.valorUnitario.toLocaleString('es-CO')}</p>
                                     </div>
                                 </div>
                             ))}

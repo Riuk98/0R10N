@@ -1,14 +1,14 @@
 
 import React, { useState } from 'react';
-import { OrionProduct } from './Inventario';
+import { UnifiedProduct } from '../../data/inventoryData';
 
 interface AnadirProductoProps {
     onClose: () => void;
-    onAddProduct: (newProduct: OrionProduct) => void;
+    onAddProduct: (newProduct: UnifiedProduct) => void;
 }
 
 const AnadirProducto: React.FC<AnadirProductoProps> = ({ onClose, onAddProduct }) => {
-    const [formData, setFormData] = useState<Omit<OrionProduct, 'id'>>({
+    const [formData, setFormData] = useState<Omit<UnifiedProduct, 'id'>>({
         codigo: '',
         nombre: '',
         cantidad: 0,
@@ -48,7 +48,7 @@ const AnadirProducto: React.FC<AnadirProductoProps> = ({ onClose, onAddProduct }
         e.preventDefault();
         if (validate()) {
             try {
-                const newProduct: OrionProduct = {
+                const newProduct: UnifiedProduct = {
                     id: formData.codigo, // Using codigo as the unique ID
                     ...formData
                 };
@@ -97,10 +97,10 @@ const AnadirProducto: React.FC<AnadirProductoProps> = ({ onClose, onAddProduct }
                         <label htmlFor="categoria" className="block text-sm font-medium mb-1">Categoría</label>
                         <select name="categoria" id="categoria" value={formData.categoria} onChange={handleChange} className="w-full bg-[var(--bg-main)] p-2 border rounded-md">
                             <option value="">Seleccione...</option>
-                            <option value="Quesos">Quesos</option>
-                            <option value="Yogures">Yogures</option>
-                            <option value="Postres">Postres</option>
-                            <option value="Otros Lácteos">Otros Lácteos</option>
+                            <option value="quesos">Quesos</option>
+                            <option value="yogures">Yogures</option>
+                            <option value="postres">Postres</option>
+                            <option value="otros">Otros Lácteos</option>
                         </select>
                          {renderError('categoria')}
                     </div>
