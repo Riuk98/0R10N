@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 
 // --- TYPE DEFINITION ---
@@ -54,6 +55,42 @@ const initialCuentasCobrar: CuentaPorCobrar[] = [
         fechaVencimiento: '2024-06-29',
         valorFactura: 5200000,
         saldo: 5200000,
+    },
+    {
+        id: 'CXC-FAC-004',
+        facturaId: 'FAC-004',
+        clienteNit: '800.567.890-1',
+        clienteNombre: 'Servicios Generales El Progreso',
+        clienteTelefono: '3190001111',
+        ciudad: 'Bogotá',
+        fechaEmision: '2024-08-01',
+        fechaVencimiento: '2024-08-31',
+        valorFactura: 1800000,
+        saldo: 1800000,
+    },
+    {
+        id: 'CXC-FAC-005',
+        facturaId: 'FAC-005',
+        clienteNit: '900.111.222-1',
+        clienteNombre: 'Cliente Fiel S.A.S.',
+        clienteTelefono: '3109876543',
+        ciudad: 'Bogotá',
+        fechaEmision: '2024-08-05',
+        fechaVencimiento: '2024-09-04',
+        valorFactura: 3200000,
+        saldo: 1000000,
+    },
+    {
+        id: 'CXC-FAC-006',
+        facturaId: 'FAC-006',
+        clienteNit: '800.333.444-5',
+        clienteNombre: 'Mercado El Ahorro',
+        clienteTelefono: '3201234567',
+        ciudad: 'Medellín',
+        fechaEmision: '2024-08-10',
+        fechaVencimiento: '2024-09-09',
+        valorFactura: 750000,
+        saldo: 750000,
     },
 ];
 
