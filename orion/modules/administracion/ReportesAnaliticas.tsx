@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// FIX: Removed import of 'products' from hatogrande/data as it's not exported there.
-// FIX: Replaced non-existent 'OrionProduct' with 'UnifiedProduct' and corrected the import path.
 import { UnifiedProduct } from '../../data/inventoryData';
+import { AsientoContable } from '../financiero/Contabilidad';
 
 // --- TYPE DEFINITIONS ---
 interface KpiData {
@@ -30,10 +29,20 @@ interface Ticket {
     creationDate: string;
 }
 
+type TipoAsiento = 'Egresos' | 'Recibos de Caja' | 'Comprobante Contable';
+const tipoAsientoPrefix: Record<TipoAsiento, string> = {
+    'Egresos': 'EG',
+    'Recibos de Caja': 'RC',
+    'Comprobante Contable': 'CT'
+};
+
+
 // --- ICONS ---
 const DollarSignIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>);
 const ShoppingCartIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>);
 const ActivityIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>);
+const DocumentIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>);
+
 
 // --- HELPER FUNCTIONS ---
 const formatCurrency = (value: number) => {
@@ -169,6 +178,17 @@ const PqrReportView: React.FC<{ data: { byStatus: any[], byType: any[] } }> = ({
     </div>
 );
 
+const ContabilidadReportView: React.FC<{ data: { kpis: { totalDebitos: number, totalCreditos: number, numAsientos: number }, topAccounts: any[] } }> = ({ data }) => (
+    <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <KpiCard title="Total Débitos" value={formatCurrency(data.kpis.totalDebitos)} icon={<DollarSignIcon />} />
+            <KpiCard title="Total Créditos" value={formatCurrency(data.kpis.totalCreditos)} icon={<DollarSignIcon />} />
+            <KpiCard title="Nro. Asientos" value={data.kpis.numAsientos.toLocaleString('es-CO')} icon={<DocumentIcon />} />
+        </div>
+        <BarChart data={data.topAccounts} title="Top 5 Cuentas con Mayor Movimiento" />
+    </div>
+);
+
 const PlaceholderReportView: React.FC<{ reportName: string }> = ({ reportName }) => (
     <div className="text-center p-10 bg-[var(--bg-main)] rounded-lg border border-dashed border-[var(--border-color)]">
         <h3 className="text-xl font-bold">Reporte: {reportName}</h3>
@@ -179,9 +199,9 @@ const PlaceholderReportView: React.FC<{ reportName: string }> = ({ reportName })
 // --- MAIN COMPONENT ---
 const ReportesAnaliticas: React.FC = () => {
     const [allOrders, setAllOrders] = useState<OrionOrder[]>([]);
-    // FIX: Changed OrionProduct to UnifiedProduct to match the actual data structure from localStorage.
     const [allProducts, setAllProducts] = useState<UnifiedProduct[]>([]);
     const [allTickets, setAllTickets] = useState<Ticket[]>([]);
+    const [allAsientos, setAllAsientos] = useState<AsientoContable[]>([]);
     
     const [selectedModule, setSelectedModule] = useState('');
     const [selectedReport, setSelectedReport] = useState('');
@@ -202,6 +222,7 @@ const ReportesAnaliticas: React.FC = () => {
                 estado: t.status,
                 tipo: t.type
             })));
+            setAllAsientos(JSON.parse(localStorage.getItem('orionAsientosContables') || '[]'));
         };
         loadData();
         window.addEventListener('storage', loadData);
@@ -274,10 +295,8 @@ const ReportesAnaliticas: React.FC = () => {
             const categorySales: { [key: string]: number } = {};
             filteredOrders.forEach(order => {
                 order.items.forEach(item => {
-                    // FIX: Use allProducts state which is loaded from localStorage, instead of the incorrect import.
                     const productInfo = allProducts.find(p => p.id === item.productId);
                     if (productInfo) {
-                        // FIX: Changed property from 'category' to 'categoria' to match UnifiedProduct interface.
                         if (!categorySales[productInfo.categoria]) categorySales[productInfo.categoria] = 0;
                         categorySales[productInfo.categoria] += item.totalPrice;
                     }
@@ -320,8 +339,40 @@ const ReportesAnaliticas: React.FC = () => {
             return { byStatus, byType };
         }
 
+        if (selectedReport === 'Reporte de Contabilidad') {
+            const filteredAsientos = allAsientos.filter(a => {
+                const asientoDate = new Date(a.fecha);
+                return asientoDate >= startDate && asientoDate <= endDate;
+            });
+    
+            const kpis = {
+                totalDebitos: filteredAsientos.reduce((sum, a) => sum + a.partidas.reduce((s, p) => s + p.debito, 0), 0),
+                totalCreditos: filteredAsientos.reduce((sum, a) => sum + a.partidas.reduce((s, p) => s + p.credito, 0), 0),
+                numAsientos: filteredAsientos.length,
+            };
+    
+            const accountMovements: { [key: string]: number } = {};
+            filteredAsientos.forEach(asiento => {
+                asiento.partidas.forEach(partida => {
+                    const totalMovement = partida.debito + partida.credito;
+                    accountMovements[partida.cuenta] = (accountMovements[partida.cuenta] || 0) + totalMovement;
+                });
+            });
+    
+            const topAccounts = Object.entries(accountMovements)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 5)
+                .map(([label, value], index) => ({
+                    label,
+                    value,
+                    color: ['#005C53', '#18bedb', '#A9DFBF', '#555', '#888'][index % 5],
+                }));
+    
+            return { kpis, topAccounts };
+        }
+
         return null;
-    }, [selectedReport, dateRange, allOrders, allTickets, allProducts]);
+    }, [selectedReport, dateRange, allOrders, allTickets, allProducts, allAsientos]);
 
     // --- UI LOGIC ---
     const reportOptions: Record<string, string[]> = {
@@ -336,12 +387,12 @@ const ReportesAnaliticas: React.FC = () => {
     };
     
     const handleGenerateReport = () => {
+        const startDate = new Date(dateRange.start);
+        startDate.setHours(0,0,0,0);
+        const endDate = new Date(dateRange.end);
+        endDate.setHours(23,59,59,999);
+
         if (selectedReport === "Reporte de Ventas") {
-            // Logic to generate and download sales CSV
-            const startDate = new Date(dateRange.start);
-            startDate.setHours(0,0,0,0);
-            const endDate = new Date(dateRange.end);
-            endDate.setHours(23,59,59,999);
             const filteredOrders = allOrders.filter(order => {
                 const orderDate = new Date(order.creationDate);
                 return orderDate >= startDate && orderDate <= endDate;
@@ -360,6 +411,43 @@ const ReportesAnaliticas: React.FC = () => {
             const link = document.createElement('a');
             link.setAttribute('href', URL.createObjectURL(blob));
             link.setAttribute('download', `Reporte_Ventas_${dateRange.start}_a_${dateRange.end}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else if (selectedReport === "Reporte de Contabilidad") {
+            const filteredAsientos = allAsientos.filter(asiento => {
+                const asientoDate = new Date(asiento.fecha);
+                return asientoDate >= startDate && asientoDate <= endDate;
+            });
+    
+            if (filteredAsientos.length === 0) {
+                alert("No hay datos para generar el reporte en el rango de fechas seleccionado.");
+                return;
+            }
+    
+            const headers = ["ID Asiento", "Consecutivo", "Fecha", "Concepto", "Cuenta", "Descripción Partida", "Débito", "Crédito"];
+            const csvRows = [headers.join(',')];
+    
+            filteredAsientos.forEach(asiento => {
+                asiento.partidas.forEach(partida => {
+                    const row = [
+                        asiento.id,
+                        `${tipoAsientoPrefix[asiento.tipo as TipoAsiento]} - ${String(asiento.consecutivo).padStart(3, '0')}`,
+                        asiento.fecha,
+                        `"${asiento.concepto.replace(/"/g, '""')}"`,
+                        partida.cuenta,
+                        `"${partida.descripcion.replace(/"/g, '""')}"`,
+                        partida.debito,
+                        partida.credito
+                    ];
+                    csvRows.push(row.join(','));
+                });
+            });
+    
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.setAttribute('href', URL.createObjectURL(blob));
+            link.setAttribute('download', `Reporte_Contabilidad_${dateRange.start}_a_${dateRange.end}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -387,6 +475,7 @@ const ReportesAnaliticas: React.FC = () => {
             case 'Reporte de PQR':
                 return <PqrReportView data={reportData as any} />;
             case 'Reporte de Contabilidad':
+                return <ContabilidadReportView data={reportData as any} />;
             case 'Movimiento de Inventario':
             case 'Compras':
             case 'Producción':

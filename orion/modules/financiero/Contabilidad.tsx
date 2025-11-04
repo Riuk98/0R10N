@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AsientoContable, Partida, initialAsientos } from '../../data/contabilidadData';
+import { AsientoContable as AsientoContableData, Partida as PartidaData, initialAsientos } from '../../data/contabilidadData';
 import { OrionUser } from '../../data/internalUsers';
 
 
@@ -10,10 +10,53 @@ const ArrowIcon = (props: { isExpanded: boolean } & React.SVGProps<SVGSVGElement
 const ViewIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
 const PdfIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
 const EditIcon = (props: React.SVGProps<SVGSVGElement>) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
+const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>);
+
+export interface Partida extends PartidaData {}
+export interface AsientoContable extends AsientoContableData {}
 
 const ASIENTOS_STORAGE_KEY = 'orionAsientosContables';
 const CONSECUTIVOS_STORAGE_KEY = 'orionContabilidadConsecutivos';
 type TipoAsiento = 'Egresos' | 'Recibos de Caja' | 'Comprobante Contable';
+
+// --- DEFINITIONS FOR ACCOUNT SEARCH MODAL ---
+const CUENTAS_COBRAR_STORAGE_KEY = 'orionCuentasCobrar';
+const CUENTAS_PAGAR_STORAGE_KEY = 'orionCuentasPagar';
+
+// Interface copied from CuentasCobrar.tsx as it's not exported
+interface CuentaPorCobrar {
+    id: string;
+    facturaId: string;
+    clienteNit: string;
+    clienteNombre: string;
+    clienteTelefono: string;
+    ciudad: string;
+    fechaEmision: string;
+    fechaVencimiento: string;
+    valorFactura: number;
+    saldo: number;
+}
+
+// Interface for Accounts Payable
+interface CuentaPorPagar {
+    id: string;
+    ordenCompraId: string;
+    proveedorId: string;
+    proveedorNombre: string;
+    fechaRecepcion: string;
+    fechaVencimiento: string;
+    valorTotal: number;
+    saldo: number;
+}
+
+// Mock data for Accounts Payable
+const initialCuentasPagar: CuentaPorPagar[] = [
+    { id: 'CXP-OC-0052', ordenCompraId: 'OC-0052', proveedorId: '860.777.888-2', proveedorNombre: 'Agroinsumos La Finca', fechaRecepcion: '2024-07-28', fechaVencimiento: '2024-08-27', valorTotal: 1200000, saldo: 1200000 },
+    { id: 'CXP-OC-0053', ordenCompraId: 'OC-0053', proveedorId: '900.999.000-3', proveedorNombre: 'Envases Plásticos de Colombia', fechaRecepcion: '2024-07-30', fechaVencimiento: '2024-08-29', valorTotal: 850000, saldo: 350000 },
+];
+
+// FIX: Define formatCurrency at module scope to be accessible by all components in this file.
+const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
 
 const tipoAsientoPrefix: Record<TipoAsiento, string> = {
     'Egresos': 'EG',
@@ -102,8 +145,6 @@ const Contabilidad: React.FC = () => {
                 : [...prev, asientoId]
         );
     };
-
-    const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
 
     return (
         <div className="p-4 space-y-4 h-full flex flex-col">
@@ -225,6 +266,74 @@ interface NuevoAsientoContableFormProps {
     onClose: () => void;
     asientoToEdit?: AsientoContable;
 }
+
+// --- Search Modal Component ---
+interface BuscarCuentasModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onSelect: (cuenta: CuentaPorCobrar | CuentaPorPagar, tipo: 'cobrar' | 'pagar') => void;
+    cuentasPorCobrar: CuentaPorCobrar[];
+    cuentasPorPagar: CuentaPorPagar[];
+}
+
+const BuscarCuentasModal: React.FC<BuscarCuentasModalProps> = ({ isOpen, onClose, onSelect, cuentasPorCobrar, cuentasPorPagar }) => {
+    const [activeTab, setActiveTab] = useState<'cobrar' | 'pagar'>('cobrar');
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredCuentasCobrar = useMemo(() => cuentasPorCobrar.filter(c => c.clienteNombre.toLowerCase().includes(searchTerm.toLowerCase()) || c.facturaId.toLowerCase().includes(searchTerm.toLowerCase())), [cuentasPorCobrar, searchTerm]);
+    const filteredCuentasPagar = useMemo(() => cuentasPorPagar.filter(c => c.proveedorNombre.toLowerCase().includes(searchTerm.toLowerCase()) || c.ordenCompraId.toLowerCase().includes(searchTerm.toLowerCase())), [cuentasPorPagar, searchTerm]);
+
+    useEffect(() => {
+        if (isOpen) setSearchTerm('');
+    }, [isOpen]);
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-[1050] flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-[var(--bg-card)] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-4 border-b border-[var(--border-color)] flex justify-between items-center">
+                    <h3 className="text-lg font-bold">Buscar Cuentas Pendientes</h3>
+                    <button onClick={onClose} className="text-2xl">&times;</button>
+                </div>
+                <div className="flex border-b border-[var(--border-color)]">
+                    <button onClick={() => setActiveTab('cobrar')} className={`flex-1 p-3 font-semibold ${activeTab === 'cobrar' ? 'bg-[var(--bg-main)] text-[var(--secondary-green)]' : ''}`}>Cuentas por Cobrar</button>
+                    <button onClick={() => setActiveTab('pagar')} className={`flex-1 p-3 font-semibold ${activeTab === 'pagar' ? 'bg-[var(--bg-main)] text-[var(--secondary-green)]' : ''}`}>Cuentas por Pagar</button>
+                </div>
+                <div className="p-4"><input type="text" placeholder="Buscar por cliente/proveedor o documento..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-2 bg-[var(--bg-main)] border rounded-md" /></div>
+                <div className="flex-grow overflow-y-auto">
+                    <table className="w-full text-sm">
+                        <thead className="bg-[var(--bg-main)] sticky top-0">
+                            <tr>
+                                <th className="p-2 text-left">{activeTab === 'cobrar' ? 'Factura' : 'O. Compra'}</th>
+                                <th className="p-2 text-left">{activeTab === 'cobrar' ? 'Cliente' : 'Proveedor'}</th>
+                                <th className="p-2 text-left">Vencimiento</th>
+                                <th className="p-2 text-right">Saldo</th>
+                                <th className="p-2">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {activeTab === 'cobrar' && filteredCuentasCobrar.map(c => (
+                                <tr key={c.id} className="border-t hover:bg-[var(--bg-main)]/50">
+                                    <td className="p-2">{c.facturaId}</td><td className="p-2">{c.clienteNombre}</td><td className="p-2">{new Date(c.fechaVencimiento).toLocaleDateString()}</td><td className="p-2 text-right">{formatCurrency(c.saldo)}</td>
+                                    <td className="p-2 text-center"><button onClick={() => onSelect(c, 'cobrar')} className="px-2 py-1 text-xs bg-[var(--secondary-green)] text-white rounded">Seleccionar</button></td>
+                                </tr>
+                            ))}
+                            {activeTab === 'pagar' && filteredCuentasPagar.map(c => (
+                                <tr key={c.id} className="border-t hover:bg-[var(--bg-main)]/50">
+                                    <td className="p-2">{c.ordenCompraId}</td><td className="p-2">{c.proveedorNombre}</td><td className="p-2">{new Date(c.fechaVencimiento).toLocaleDateString()}</td><td className="p-2 text-right">{formatCurrency(c.saldo)}</td>
+                                    <td className="p-2 text-center"><button onClick={() => onSelect(c, 'pagar')} className="px-2 py-1 text-xs bg-[var(--secondary-green)] text-white rounded">Seleccionar</button></td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 export const NuevoAsientoContableForm: React.FC<NuevoAsientoContableFormProps> = ({ onClose, asientoToEdit }) => {
     const isEditMode = !!asientoToEdit;
     const [tipo, setTipo] = useState<TipoAsiento | ''>('');
@@ -235,6 +344,12 @@ export const NuevoAsientoContableForm: React.FC<NuevoAsientoContableFormProps> =
         { cuenta: '', descripcion: '', debito: 0, credito: 0 },
         { cuenta: '', descripcion: '', debito: 0, credito: 0 },
     ]);
+
+    // State for the new modal
+    const [cuentasPorCobrar, setCuentasPorCobrar] = useState<CuentaPorCobrar[]>([]);
+    const [cuentasPorPagar, setCuentasPorPagar] = useState<CuentaPorPagar[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingPartidaIndex, setEditingPartidaIndex] = useState<number | null>(null);
     
     useEffect(() => {
         if (asientoToEdit) {
@@ -260,6 +375,53 @@ export const NuevoAsientoContableForm: React.FC<NuevoAsientoContableFormProps> =
             setConsecutivo(0);
         }
     }, [tipo, isEditMode]);
+
+    // Effect to load CxC and CxP data
+    useEffect(() => {
+        const storedCxc = localStorage.getItem(CUENTAS_COBRAR_STORAGE_KEY);
+        if (storedCxc) setCuentasPorCobrar(JSON.parse(storedCxc).filter((c: CuentaPorCobrar) => c.saldo > 0));
+
+        const storedCxp = localStorage.getItem(CUENTAS_PAGAR_STORAGE_KEY);
+        if (storedCxp) setCuentasPorPagar(JSON.parse(storedCxp).filter((c: CuentaPorPagar) => c.saldo > 0));
+        else {
+            localStorage.setItem(CUENTAS_PAGAR_STORAGE_KEY, JSON.stringify(initialCuentasPagar));
+            setCuentasPorPagar(initialCuentasPagar.filter(c => c.saldo > 0));
+        }
+    }, []);
+
+    const openModalForPartida = (index: number) => {
+        setEditingPartidaIndex(index);
+        setIsModalOpen(true);
+    };
+
+    const handleSelectCuenta = (cuenta: CuentaPorCobrar | CuentaPorPagar, tipo: 'cobrar' | 'pagar') => {
+        if (editingPartidaIndex === null) return;
+        let partida1: Omit<Partida, 'id'>, partida2: Omit<Partida, 'id'>;
+
+        if (tipo === 'cobrar') {
+            const cxc = cuenta as CuentaPorCobrar;
+            partida1 = { cuenta: '110505', descripcion: `Abono F. ${cxc.facturaId} - ${cxc.clienteNombre}`, debito: cxc.saldo, credito: 0 };
+            partida2 = { cuenta: '130505', descripcion: `Cancelación F. ${cxc.facturaId}`, debito: 0, credito: cxc.saldo };
+        } else {
+            const cxp = cuenta as CuentaPorPagar;
+            partida1 = { cuenta: '2205', descripcion: `Abono OC ${cxp.ordenCompraId} - ${cxp.proveedorNombre}`, debito: cxp.saldo, credito: 0 };
+            partida2 = { cuenta: '111005', descripcion: `Pago OC ${cxp.ordenCompraId}`, debito: 0, credito: cxp.saldo };
+        }
+        
+        const newPartidas = [...partidas];
+        newPartidas[editingPartidaIndex] = partida1;
+        
+        const nextIndex = editingPartidaIndex + 1;
+        if (nextIndex < newPartidas.length && newPartidas[nextIndex].cuenta === '' && newPartidas[nextIndex].debito === 0 && newPartidas[nextIndex].credito === 0) {
+            newPartidas[nextIndex] = partida2;
+        } else {
+            newPartidas.splice(nextIndex, 0, partida2);
+        }
+        
+        setPartidas(newPartidas);
+        setIsModalOpen(false);
+        setEditingPartidaIndex(null);
+    };
 
 
     const handlePartidaChange = (index: number, field: keyof Omit<Partida, 'id'>, value: string | number) => {
@@ -297,26 +459,27 @@ export const NuevoAsientoContableForm: React.FC<NuevoAsientoContableFormProps> =
             alert("Verifique que el asiento esté balanceado, y que el tipo, fecha y concepto no estén vacíos.");
             return;
         }
-        
+    
         const currentUserRaw = sessionStorage.getItem('orionCurrentUser');
         const currentUser: OrionUser | null = currentUserRaw ? JSON.parse(currentUserRaw) : null;
         const userName = currentUser ? `${currentUser.nombre || ''} ${currentUser.apellidos || ''}`.trim() || currentUser.username : 'Sistema';
-
+    
         const asientoData: AsientoContable = {
-            id: isEditMode ? asientoToEdit.id : `AS-${Date.now()}`,
+            id: isEditMode ? asientoToEdit!.id : `AS-${Date.now()}`,
             fecha,
             concepto,
             tipo,
-            consecutivo: isEditMode ? asientoToEdit.consecutivo : consecutivo,
+            consecutivo: isEditMode ? asientoToEdit!.consecutivo : consecutivo,
             partidas: partidas.map((p, i) => ({ ...p, id: Date.now() + i })),
             creadoPor: userName,
         };
-        
+    
         try {
+            // --- SAVE ACCOUNTING ENTRY ---
             const storedAsientos = JSON.parse(localStorage.getItem(ASIENTOS_STORAGE_KEY) || '[]');
             const isUpdating = storedAsientos.some((a: AsientoContable) => a.id === asientoData.id);
             let updatedAsientos;
-
+    
             if (isUpdating) {
                 updatedAsientos = storedAsientos.map((a: AsientoContable) => a.id === asientoData.id ? asientoData : a);
             } else {
@@ -326,18 +489,61 @@ export const NuevoAsientoContableForm: React.FC<NuevoAsientoContableFormProps> =
                 localStorage.setItem(CONSECUTIVOS_STORAGE_KEY, JSON.stringify(storedConsecutivos));
             }
             localStorage.setItem(ASIENTOS_STORAGE_KEY, JSON.stringify(updatedAsientos));
+    
+            // --- UPDATE CxC / CxP BALANCES ---
+            if (asientoData.tipo === 'Recibos de Caja') {
+                const storedCxc = JSON.parse(localStorage.getItem(CUENTAS_COBRAR_STORAGE_KEY) || '[]');
+                let hasChanges = false;
+                asientoData.partidas.forEach(partida => {
+                    if (partida.cuenta === '130505' && partida.credito > 0) {
+                        const match = partida.descripcion.match(/F\.\s*([A-Z0-9-]+)/i);
+                        if (match && match[1]) {
+                            const facturaId = match[1];
+                            const cxcIndex = storedCxc.findIndex((c: any) => c.facturaId === facturaId);
+                            if (cxcIndex > -1) {
+                                storedCxc[cxcIndex].saldo = Math.max(0, storedCxc[cxcIndex].saldo - partida.credito);
+                                hasChanges = true;
+                            }
+                        }
+                    }
+                });
+                if (hasChanges) {
+                    localStorage.setItem(CUENTAS_COBRAR_STORAGE_KEY, JSON.stringify(storedCxc));
+                }
+            } else if (asientoData.tipo === 'Egresos') {
+                const storedCxp = JSON.parse(localStorage.getItem(CUENTAS_PAGAR_STORAGE_KEY) || '[]');
+                let hasChanges = false;
+                asientoData.partidas.forEach(partida => {
+                    if (partida.cuenta === '2205' && partida.debito > 0) {
+                        const match = partida.descripcion.match(/OC\s*([A-Z0-9-]+)/i);
+                        if (match && match[1]) {
+                            const ordenCompraId = match[1];
+                            const cxpIndex = storedCxp.findIndex((c: any) => c.ordenCompraId === ordenCompraId);
+                            if (cxpIndex > -1) {
+                                storedCxp[cxpIndex].saldo = Math.max(0, storedCxp[cxpIndex].saldo - partida.debito);
+                                hasChanges = true;
+                            }
+                        }
+                    }
+                });
+                if (hasChanges) {
+                    localStorage.setItem(CUENTAS_PAGAR_STORAGE_KEY, JSON.stringify(storedCxp));
+                }
+            }
+    
             window.dispatchEvent(new Event('storage')); // Notify other components
         } catch (error) {
-            console.error("Failed to save asiento", error);
+            console.error("Failed to save asiento and update accounts", error);
+            alert("Ocurrió un error al guardar el asiento contable.");
         }
-
+    
         onClose();
     };
 
-    const formatCurrency = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value);
 
     return (
         <div className="bg-[var(--bg-card)] p-6 h-full flex flex-col">
+            <BuscarCuentasModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelect={handleSelectCuenta} cuentasPorCobrar={cuentasPorCobrar} cuentasPorPagar={cuentasPorPagar} />
             <h3 className="text-xl font-bold text-[var(--text-primary)] mb-4 flex-shrink-0">{isEditMode ? 'Editar Asiento Contable' : 'Crear Nuevo Asiento Contable'}</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 flex-shrink-0">
@@ -367,7 +573,12 @@ export const NuevoAsientoContableForm: React.FC<NuevoAsientoContableFormProps> =
             <div className="flex-grow overflow-y-auto border-t border-b border-[var(--border-color)] py-2">
                 {partidas.map((partida, index) => (
                     <div key={index} className="grid grid-cols-12 gap-2 items-center mb-2">
-                        <input type="text" placeholder="Cuenta (e.g., 110505)" value={partida.cuenta} onChange={e => handlePartidaChange(index, 'cuenta', e.target.value)} className="col-span-3 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
+                        <div className="col-span-3 relative">
+                            <input type="text" placeholder="Cuenta (e.g., 110505)" value={partida.cuenta} onChange={e => handlePartidaChange(index, 'cuenta', e.target.value)} className="w-full bg-[var(--bg-main)] p-1.5 border rounded-md text-sm pr-8" />
+                            <button type="button" onClick={() => openModalForPartida(index)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[var(--border-color)]" title="Buscar Cuentas Pendientes">
+                                <SearchIcon className="w-4 h-4 text-gray-500" />
+                            </button>
+                        </div>
                         <input type="text" placeholder="Descripción" value={partida.descripcion} onChange={e => handlePartidaChange(index, 'descripcion', e.target.value)} className="col-span-4 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm" />
                         <input type="number" placeholder="Débito" value={partida.debito || ''} onChange={e => handlePartidaChange(index, 'debito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />
                         <input type="number" placeholder="Crédito" value={partida.credito || ''} onChange={e => handlePartidaChange(index, 'credito', e.target.value)} className="col-span-2 bg-[var(--bg-main)] p-1.5 border rounded-md text-sm text-right" />

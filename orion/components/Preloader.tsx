@@ -112,8 +112,9 @@ class Particle {
         ctx.fillStyle = 'white';
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        // FIX: Changed ctx.fill() to ctx.fill('nonzero') to satisfy TypeScript's requirement for at least one argument.
-        ctx.fill('nonzero');
+        // FIX: Changed ctx.fill('nonzero') to ctx.fill() to resolve argument mismatch error.
+        // The 'nonzero' fill rule is the default, so behavior is identical.
+        ctx.fill();
     }
 }
 

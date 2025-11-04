@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { UnifiedProduct } from '../../data/inventoryData';
 import { Tercero } from './ClientesCRM';
@@ -152,6 +153,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
     const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
     const [deliveryDate, setDeliveryDate] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
+    const [creditTerm, setCreditTerm] = useState<number>(0);
     
     const [items, setItems] = useState<OrderItem[]>([]);
     const [currentItem, setCurrentItem] = useState({ id: '', name: '', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 });
@@ -196,6 +198,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
         setOrderDate(new Date().toISOString().split('T')[0]);
         setDeliveryDate('');
         setPaymentMethod('');
+        setCreditTerm(0);
         setItems([]);
         setCurrentItem({ id: '', name: '', quantity: 1, unitPrice: 0, discount: 0, totalPrice: 0 });
         setObservations('');
@@ -216,6 +219,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
             setOrderDate(new Date(orderToEdit.creationDate).toISOString().split('T')[0]);
             setDeliveryDate(orderToEdit.deliveryDate ? new Date(orderToEdit.deliveryDate).toISOString().split('T')[0] : '');
             setPaymentMethod(orderToEdit.paymentMethod || '');
+            setCreditTerm(orderToEdit.creditTermDays || 0);
             setItems(orderToEdit.items.map((item: any, index: number) => ({
                 id: Date.now() + index,
                 productId: item.productId,
@@ -361,6 +365,10 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
             alert("Debe seleccionar un cliente y agregar al menos un producto.");
             return null;
         }
+        if (paymentMethod === 'Crédito' && creditTerm === 0) {
+            alert("Debe seleccionar un plazo para el pago a crédito.");
+            return null;
+        }
 
         const newOrder = {
             id: isEditMode ? orderToEdit.id : orderId,
@@ -372,6 +380,7 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
             clientEmail: client.email,
             deliveryDate: deliveryDate ? new Date(deliveryDate).toISOString() : undefined,
             paymentMethod: paymentMethod,
+            creditTermDays: paymentMethod === 'Crédito' ? creditTerm : 0,
             items: items.map(i => ({
                 productId: i.productId,
                 productName: i.productName,
@@ -486,13 +495,33 @@ const CrearPedido: React.FC<CrearPedidoProps> = ({ onClose, permissions, orderTo
                             <InputField label="Dirección" name="direccion" value={client.direccion} onChange={(e) => {setClient(c => ({...c, direccion: e.target.value})); setIsDirty(true);}} />
                             <InputField label="Teléfono" name="telefono" value={client.telefono} onChange={(e) => {setClient(c => ({...c, telefono: e.target.value})); setIsDirty(true);}} />
                             <InputField label="E-mail" name="email" value={client.email} onChange={(e) => {setClient(c => ({...c, email: e.target.value})); setIsDirty(true);}} />
-                            <div>
+                            <div className="col-span-2">
                                 <label className="text-sm font-medium text-[var(--text-secondary)] mb-1 block">Tipo de pago</label>
                                 <select name="paymentMethod" value={paymentMethod} onChange={(e) => {setPaymentMethod(e.target.value); setIsDirty(true);}} className="w-full bg-[var(--bg-main)] text-[var(--text-primary)] border border-transparent rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-[var(--secondary-green)] h-[34px]">
                                     <option value="">Seleccione...</option>
                                     <option value="Contado">Contado</option>
                                     <option value="Crédito">Crédito</option>
                                 </select>
+                                {paymentMethod === 'Crédito' && (
+                                    <div className="p-2 border border-dashed border-[var(--border-color)] rounded-lg mt-2 animate-fade-in-up">
+                                        <label className="text-sm font-medium text-[var(--text-secondary)] mb-1 block">Plazo de Crédito</label>
+                                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                                            {[15, 30, 60, 90].map(days => (
+                                                <label key={days} className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="creditTerm"
+                                                        value={days}
+                                                        checked={creditTerm === days}
+                                                        onChange={(e) => { setCreditTerm(Number(e.target.value)); setIsDirty(true); }}
+                                                        className="h-4 w-4 text-[var(--secondary-green)] focus:ring-[var(--secondary-green)]"
+                                                    />
+                                                    {days} días
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -151,6 +151,38 @@ export const OrdenCompraForm: React.FC<OrdenCompraFormProps> = ({ onClose, orden
             total,
             creadoPor: userName,
         };
+
+        const isNowRecibida = finalOrden.estado === 'Recibida';
+        const wasPreviouslyRecibida = isEditMode && ordenToEdit?.estado === 'Recibida';
+
+        if (isNowRecibida && !wasPreviouslyRecibida) {
+            try {
+                const CUENTAS_PAGAR_STORAGE_KEY = 'orionCuentasPagar';
+                const storedCxp = JSON.parse(localStorage.getItem(CUENTAS_PAGAR_STORAGE_KEY) || '[]');
+                const existingCxp = storedCxp.find((c: any) => c.ordenCompraId === finalOrden.id);
+
+                if (!existingCxp) {
+                    const fechaRecepcion = new Date();
+                    const fechaVencimiento = new Date();
+                    fechaVencimiento.setDate(fechaRecepcion.getDate() + 30); // Assume 30 days credit
+
+                    const newCxp = {
+                        id: `CXP-${finalOrden.id}`,
+                        ordenCompraId: finalOrden.id,
+                        proveedorId: finalOrden.proveedorId,
+                        proveedorNombre: finalOrden.proveedorNombre,
+                        fechaRecepcion: fechaRecepcion.toISOString().split('T')[0],
+                        fechaVencimiento: fechaVencimiento.toISOString().split('T')[0],
+                        valorTotal: finalOrden.total,
+                        saldo: finalOrden.total,
+                    };
+                    storedCxp.push(newCxp);
+                    localStorage.setItem(CUENTAS_PAGAR_STORAGE_KEY, JSON.stringify(storedCxp));
+                }
+            } catch (error) {
+                console.error('Failed to create account payable entry', error);
+            }
+        }
         
         try {
             const storedData = JSON.parse(localStorage.getItem(COMPRAS_STORAGE_KEY) || '[]');

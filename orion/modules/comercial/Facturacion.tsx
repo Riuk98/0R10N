@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { OrionUser } from '../../data/internalUsers';
 import { UnifiedProduct } from '../../data/inventoryData';
@@ -125,8 +127,11 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose = () => {}, on
                 // 4. Update Accounts Receivable if credit
                 if (order.paymentMethod === 'Crédito') {
                     const storedCuentasCobrar = JSON.parse(localStorage.getItem(CUENTAS_COBRAR_STORAGE_KEY) || '[]');
-                    const fechaVencimiento = new Date();
-                    fechaVencimiento.setDate(fechaVencimiento.getDate() + 30); // 30-day credit
+                    const fechaEmision = new Date();
+                    const fechaVencimiento = new Date(fechaEmision);
+                    const creditDays = order.creditTermDays || 30; // Use term from order, fallback to 30
+                    fechaVencimiento.setDate(fechaVencimiento.getDate() + creditDays);
+
                     const newCuenta = {
                         id: `CXC-${facturaId}`,
                         facturaId: facturaId,
@@ -134,7 +139,7 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose = () => {}, on
                         clienteNombre: order.clientName,
                         clienteTelefono: order.clientPhone,
                         ciudad: order.clientAddress.split(',')[1]?.trim() || 'N/A',
-                        fechaEmision: new Date().toISOString(),
+                        fechaEmision: fechaEmision.toISOString(),
                         fechaVencimiento: fechaVencimiento.toISOString(),
                         valorFactura: total,
                         saldo: total,
@@ -255,6 +260,11 @@ const Facturacion: React.FC<FacturacionProps> = ({ order, onClose = () => {}, on
                              <label className="font-semibold">Tipo de pago:</label>
                              <label className="flex items-center gap-1"><input type="checkbox" checked={order?.paymentMethod?.toLowerCase() === 'crédito'} readOnly /> Crédito</label>
                              <label className="flex items-center gap-1"><input type="checkbox" checked={order?.paymentMethod?.toLowerCase() === 'contado'} readOnly /> Contado</label>
+                             {order?.paymentMethod?.toLowerCase() === 'crédito' && (
+                                <span className="text-xs font-semibold bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                    {order.creditTermDays || 30} DÍAS
+                                </span>
+                            )}
                         </div>
                          <div className="md:col-span-2">
                             <label className="font-semibold block mb-1">Orden de Pedido:</label>

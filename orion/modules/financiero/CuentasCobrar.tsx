@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 
 // --- TYPE DEFINITION ---
@@ -15,6 +16,46 @@ interface CuentaPorCobrar {
 }
 
 const CUENTAS_COBRAR_STORAGE_KEY = 'orionCuentasCobrar';
+
+// --- MOCK DATA ---
+const initialCuentasCobrar: CuentaPorCobrar[] = [
+    {
+        id: 'CXC-FAC-001',
+        facturaId: 'FAC-001',
+        clienteNit: '900.111.222-1',
+        clienteNombre: 'Cliente Fiel S.A.S.',
+        clienteTelefono: '3109876543',
+        ciudad: 'Bogotá',
+        fechaEmision: '2024-07-15',
+        fechaVencimiento: '2024-08-14',
+        valorFactura: 2500000,
+        saldo: 2500000,
+    },
+    {
+        id: 'CXC-FAC-002',
+        facturaId: 'FAC-002',
+        clienteNit: '800.333.444-5',
+        clienteNombre: 'Mercado El Ahorro',
+        clienteTelefono: '3201234567',
+        ciudad: 'Medellín',
+        fechaEmision: '2024-06-20',
+        fechaVencimiento: '2024-07-20',
+        valorFactura: 800000,
+        saldo: 300000,
+    },
+    {
+        id: 'CXC-FAC-003',
+        facturaId: 'FAC-003',
+        clienteNit: '901.234.567-9',
+        clienteNombre: 'Comercializadora y Logística Integral',
+        clienteTelefono: '3178889999',
+        ciudad: 'Bogotá',
+        fechaEmision: '2024-05-30',
+        fechaVencimiento: '2024-06-29',
+        valorFactura: 5200000,
+        saldo: 5200000,
+    },
+];
 
 // --- ICONS ---
 const CloudDownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -49,9 +90,13 @@ const CuentasCobrar: React.FC = () => {
             const storedCuentas = localStorage.getItem(CUENTAS_COBRAR_STORAGE_KEY);
             if (storedCuentas) {
                 setCuentas(JSON.parse(storedCuentas));
+            } else {
+                setCuentas(initialCuentasCobrar);
+                localStorage.setItem(CUENTAS_COBRAR_STORAGE_KEY, JSON.stringify(initialCuentasCobrar));
             }
         } catch (error) {
             console.error("Failed to load accounts receivable:", error);
+            setCuentas(initialCuentasCobrar);
         }
     };
     
@@ -73,9 +118,10 @@ const CuentasCobrar: React.FC = () => {
 
     const calculateDiasMora = (fechaVencimiento: string) => {
         const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0); // Compare dates only, ignoring time
         const vencimiento = new Date(fechaVencimiento);
         if (hoy <= vencimiento) return 0;
-        const diffTime = Math.abs(hoy.getTime() - vencimiento.getTime());
+        const diffTime = hoy.getTime() - vencimiento.getTime();
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     };
 

@@ -128,6 +128,7 @@ const ModuleContent: React.FC<{
     winId?: string;
     orionProducts?: UnifiedProduct[];
     orionInsumos?: OrionInsumo[];
+    // FIX: Explicitly add onUpdateProductStock to the props interface to satisfy child components.
     onUpdateProductStock: (productId: string, quantityChange: number) => void;
     [key: string]: any; // To allow passing arbitrary props
 }> = ({ title, onClose = () => {}, permissions, winId, orionProducts, orionInsumos, onUpdateProductStock, ...props }) => {
@@ -138,6 +139,7 @@ const ModuleContent: React.FC<{
         case 'Crear Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} winId={winId} orionProducts={orionProducts} />;
         case 'Editar Pedido': return <CrearPedido onClose={onClose} permissions={permissions} {...props} winId={winId} orionProducts={orionProducts} />;
         case 'Generar Ticket': return <CrearTicket onClose={onClose} />;
+        // FIX: Pass the onUpdateProductStock prop to the Facturacion component.
         case 'Facturación': return <Facturacion onClose={onClose} {...props} onUpdateProductStock={onUpdateProductStock} />;
 
         case 'Cuentas por Cobrar': return <CuentasCobrar />;
@@ -152,8 +154,11 @@ const ModuleContent: React.FC<{
         case 'Compras': return <Compras permissions={permissions} allInsumos={orionInsumos} proveedores={props.proveedores} />;
         case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
         case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
+        // FIX: Pass the onUpdateProductStock prop to the Produccion component.
         case 'Producción': return <Produccion permissions={permissions} allProducts={orionProducts} allInsumos={orionInsumos} onUpdateProductStock={onUpdateProductStock} />;
+        // FIX: Pass the onUpdateProductStock prop to the OrdenProduccionForm component.
         case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={orionProducts} allInsumos={orionInsumos} ordenToEdit={null} onUpdateProductStock={onUpdateProductStock} {...props} />;
+        // FIX: Pass the onUpdateProductStock prop and spread props to the OrdenProduccionForm component.
         case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={orionProducts} allInsumos={orionInsumos} ordenToEdit={props.ordenToEdit} onUpdateProductStock={onUpdateProductStock} {...props} />;
         
         case 'Reportes y Analíticas': return <ReportesAnaliticas />;
@@ -513,6 +518,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
             )
         );
 
+
         if (existingWindow) {
             if (existingWindow.isMinimized) {
                 restoreWindow(existingWindow.id);
@@ -531,21 +537,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
             isMaximized: false,
             zIndex: nextZIndex.current++,
             animationState: 'opening',
-            props: {
-                ...props,
-                onAddProduct,
-                onUpdateProductStock,
-            },
+            props,
         };
-        setWindows(prev => [...prev, newWindow]);
+        setWindows([...windows, newWindow]);
         focusWindow(newWindow.id);
-    }, [windows, onAddProduct, onUpdateProductStock]);
+    }, [windows]);
 
     useEffect(() => {
         const handleCreateWindow = (event: Event) => {
             const customEvent = event as CustomEvent;
             if (customEvent.detail && customEvent.detail.title) {
-                createWindow(customEvent.detail.title, customEvent.detail.props);
+                // Pass handlers into the window props
+                const propsWithHandlers = {
+                    ...customEvent.detail.props,
+                    onAddProduct,
+                    onUpdateProductStock,
+                };
+                createWindow(customEvent.detail.title, propsWithHandlers);
             }
         };
 
@@ -554,7 +562,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout, unifiedProducts, onAddP
         return () => {
             window.removeEventListener('createOrionWindow', handleCreateWindow);
         };
-    }, [createWindow]);
+    }, [createWindow, onAddProduct, onUpdateProductStock]);
 
     const updateWindow = (id: string, updates: Partial<WindowState>) => {
         // If a window is being maximized, minimize all other open windows
