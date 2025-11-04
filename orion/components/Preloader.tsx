@@ -112,6 +112,7 @@ class Particle {
         ctx.fillStyle = 'white';
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        // FIX: Pass 'nonzero' fill rule to ctx.fill() to resolve "Expected 1 arguments, but got 0" error.
         ctx.fill('nonzero');
     }
 }

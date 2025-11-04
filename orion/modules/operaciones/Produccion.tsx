@@ -1,5 +1,9 @@
 
 
+
+
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { OrionUser } from '../../data/internalUsers';
 import { OrionProduct, OrionInsumo } from './Inventario';
@@ -21,6 +25,7 @@ export interface OrdenProduccion {
     fechaFin?: string; // 'YYYY-MM-DD'
     insumosRequeridos: InsumoRequerido[];
     estado: 'Planeada' | 'En Proceso' | 'Control de Calidad' | 'Finalizada';
+    // FIX: Make 'observaciones' required to ensure data consistency and resolve type mismatch.
     observaciones: string;
     creadoPor: string;
 }

@@ -70,6 +70,12 @@ const Icons = {
     Admin: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>),
     ArrowLeft: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>),
     Trash: (props: React.SVGProps<SVGSVGElement>) => (<svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>),
+    Pin: (props: React.SVGProps<SVGSVGElement>) => (
+        <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="17" x2="12" y2="22"></line>
+            <path d="M17 4.33V9l4 2-6 2v6H9v-6l-6-2 4-2V4.33C7 2.5 8.5 1 10.33 1h3.34C15.5 1 17 2.5 17 4.33z"></path>
+        </svg>
+    ),
     Close: (props: React.SVGProps<SVGSVGElement>) => (
         <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -147,9 +153,11 @@ const ModuleContent: React.FC<{
         case 'Inventario': return <Inventario permissions={permissions} products={props.orionProducts} insumos={props.orionInsumos} />;
         case 'Anadir Producto': return <AnadirProducto onClose={onClose} onAddProduct={props.onAddProduct} />;
         case 'Compras': return <Compras permissions={permissions} allInsumos={props.orionInsumos} proveedores={props.proveedores} />;
+        // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
         case 'Nueva Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={null} />;
         case 'Editar Orden de Compra': return <OrdenCompraForm onClose={onClose} allInsumos={props.orionInsumos} proveedores={props.proveedores} ordenToEdit={props.ordenToEdit} />;
         case 'Producción': return <Produccion permissions={permissions} allProducts={props.orionProducts} allInsumos={props.orionInsumos} />;
+        // FIX: Explicitly pass the `ordenToEdit` prop to satisfy the component's required props.
         case 'Nueva Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={null} {...props} />;
         case 'Editar Orden de Producción': return <OrdenProduccionForm onClose={onClose} allProducts={props.orionProducts} allInsumos={props.orionInsumos} ordenToEdit={props.ordenToEdit} />;
         
@@ -284,7 +292,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     const [isPartiallyCollapsed, setPartiallyCollapsed] = useState(false);
     const [openPillars, setOpenPillars] = useState<string[]>([]);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [isSidebarPinned, setSidebarPinned] = useState(false); // For pinning the sidebar
     const userMenuRef = useRef<HTMLDivElement>(null);
+    const sidebarRef = useRef<HTMLElement>(null); // For click-outside detection
     const [currentTime, setCurrentTime] = useState('');
     const [windows, setWindows] = useState<WindowState[]>([]);
     const [windowToCloseId, setWindowToCloseId] = useState<string | null>(null);
@@ -466,16 +476,29 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         return () => clearInterval(timer);
     }, []);
 
-    // Click outside user menu
+    // Click outside user menu & sidebar
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
+            // User menu
             if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
                 setUserMenuOpen(false);
+            }
+
+            // Sidebar collapse (only if not pinned)
+            if (isSidebarPinned || isSidebarForceOpen || isPartiallyCollapsed || isSidebarCollapsed) {
+                return;
+            }
+            const menuToggle = document.getElementById('menu-toggle');
+            if (menuToggle && menuToggle.contains(event.target as Node)) {
+                return;
+            }
+            if (sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+                setPartiallyCollapsed(true);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [isSidebarPinned, isSidebarForceOpen, isPartiallyCollapsed, isSidebarCollapsed]);
 
     // Effect to manage initial load animation
     useEffect(() => {
@@ -499,8 +522,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         const togglePillar = () => {
             setOpenPillars(prevOpenPillars =>
                 prevOpenPillars.includes(title)
-                    ? prevOpenPillars.filter(p => p !== title)
-                    : [...prevOpenPillars, title]
+                    ? [] // If it's already open, close it
+                    : [title] // Otherwise, open it and close others
             );
         };
 
@@ -924,7 +947,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
             </header>
 
-            <aside className="sidebar">
+            <aside className="sidebar" ref={sidebarRef}>
                 <ul className="sidebar-nav">
                     {filteredNavData.map(pillar => (
                          <li key={pillar.title} className="nav-item">
@@ -946,6 +969,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     ))}
                 </ul>
                  <div className="sidebar-footer">
+                    <button onClick={() => setSidebarPinned(!isSidebarPinned)} title={isSidebarPinned ? "Desfijar menú" : "Fijar menú"}>
+                        <Icons.Pin className="w-5 h-5 flex-shrink-0" style={{ transition: 'transform 0.3s, color 0.3s', transform: isSidebarPinned ? 'rotate(45deg)' : 'none', color: isSidebarPinned ? 'var(--secondary-green)' : 'inherit' }} />
+                        <span>{isSidebarPinned ? 'Fijo' : 'Fijar'}</span>
+                    </button>
                     <button onClick={togglePartialCollapse} title="Contraer menú">
                         <Icons.ArrowLeft className="collapse-arrow w-5 h-5 flex-shrink-0" />
                         <span>Contraer</span>
