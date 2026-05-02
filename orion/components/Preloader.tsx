@@ -1,236 +1,199 @@
+import React, { useEffect, useState, useRef } from 'react'; // Importamos hooks básicos de React para efectos, estado y referencias
+import { motion } from 'motion/react'; // Importamos la librería motion para animaciones fluidas
+import { Loader2 } from 'lucide-react'; // Importamos el icono de carga de lucide-react
 
-
-import React, { useEffect, useRef, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
-
+/**
+ * Interface para las propiedades del componente OrionPreloader
+ */
 interface PreloaderProps {
-    onLoadingComplete: () => void;
+    onLoadingComplete: () => void; // Función callback que se ejecuta al terminar la carga
 }
 
-// --- Keyframes ---
-const fadeIn = keyframes`
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-`;
+/**
+ * BeamsBackground Component
+ * Renderiza una animación de fondo con rayos de luz en movimiento usando Canvas.
+ */
+const BeamsBackground: React.FC = () => { // Definimos el componente funcional para el fondo animado
+    const canvasRef = useRef<HTMLCanvasElement>(null); // Creamos una referencia para acceder al elemento canvas del DOM
 
-const spin = keyframes`
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-`;
-
-// --- Styled Components ---
-const PreloaderContainer = styled.div`
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(to bottom right, #e0f2fe, #7dd3fc);
-    z-index: 9999;
-    overflow: hidden;
-`;
-
-const Canvas = styled.canvas`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-`;
-
-const Logo = styled.img`
-    width: 100%;
-    max-width: 250px;
-    animation: ${fadeIn} 1.2s ease-out forwards;
-    z-index: 10;
-    filter: drop-shadow(0 0 1.5rem rgba(0, 0, 0, 0.4));
-`;
-
-const LoadingContainer = styled.div`
-    margin-top: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
-    z-index: 10;
-    animation: ${fadeIn} 1.2s ease-out forwards;
-    animation-delay: 0.2s;
-    opacity: 0;
-`;
-
-const PercentageText = styled.p`
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #042940;
-    letter-spacing: 0.1em;
-`;
-
-const SpinningGear = styled.div`
-    width: 2rem;
-    height: 2rem;
-    color: #042940;
-    animation: ${spin} 2s linear infinite;
-`;
-
-// --- SVG Icon ---
-const GearIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5zm7.43-2.53l1.49-1.49c.2-.2.2-.51 0-.71l-1.42-1.42c-.2-.2-.51-.2-.71 0l-1.95 1.95c-.4-.28-.85-.48-1.34-.6V7.25c0-.28-.22-.5-.5-.5h-2c-.28 0-.5.22-.5.5v1.95c-.49.12-.94-.32-1.34.6L7.6 7.84c-.2-.2-.51-.2-.71 0L5.47 9.26c-.2.2-.2.51 0 .71l1.49 1.49c-.08.47-.16.94-.16 1.43s.08.96.16 1.43l-1.49 1.49c-.2.2-.2.51 0 .71l1.42 1.42c.2.2.51.2.71 0l1.95-1.95c.4.28.85.48 1.34.6v1.95c0 .28.22.5.5.5h2c.28 0 .5-.22-.5.5v-1.95c.49-.12-.94-.32-1.34-.6l1.95 1.95c.2.2.51.2.71 0l1.42-1.42c-.2-.2.2-.51 0-.71l-1.49-1.49c.08-.47.16-.94-.16-1.43s-.08-.96-.16-1.43z"/>
-    </svg>
-);
-
-
-// --- Particle Logic ---
-class Particle {
-    x: number;
-    y: number;
-    size: number;
-    speedX: number;
-    speedY: number;
-
-    constructor(canvasWidth: number, canvasHeight: number) {
-        this.x = Math.random() * canvasWidth;
-        this.y = Math.random() * canvasHeight;
-        this.size = Math.random() * 2 + 1;
-        this.speedX = (Math.random() * 2 - 1) * 0.5;
-        this.speedY = (Math.random() * 2 - 1) * 0.5;
-    }
-
-    update(canvasWidth: number, canvasHeight: number) {
-        this.x += this.speedX;
-        this.y += this.speedY;
-
-        if (this.x > canvasWidth) this.x = 0;
-        else if (this.x < 0) this.x = canvasWidth;
-        if (this.y > canvasHeight) this.y = 0;
-        else if (this.y < 0) this.y = canvasHeight;
-    }
-
-    draw(ctx: CanvasRenderingContext2D) {
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        // FIX: Changed ctx.fill('nonzero') to ctx.fill() to resolve argument mismatch error.
-        // The 'nonzero' fill rule is the default, so behavior is identical.
-        ctx.fill();
-    }
-}
-
-
-const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const particlesRef = useRef<Particle[]>([]);
-    const animationFrameId = useRef<number>();
-    const [percentage, setPercentage] = useState(0);
-
-    useEffect(() => {
-        const DURATION = 4000; // Total duration in ms
-
-        const completeTimer = setTimeout(() => {
-            onLoadingComplete();
-        }, DURATION + 500);
-
-        const percentageInterval = setInterval(() => {
-            setPercentage(prev => {
-                const next = prev + 1;
-                if (next > 100) {
-                    clearInterval(percentageInterval);
-                    return 100;
-                }
-                return next;
-            });
-        }, DURATION / 100);
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
+    useEffect(() => { // Hook para inicializar y gestionar la animación del canvas al montar el componente
+        const canvas = canvasRef.current; // Obtenemos el elemento canvas actual de la referencia
+        if (!canvas) return; // Si el canvas no existe, salimos de la función
+        const ctx = canvas.getContext('2d'); // Obtenemos el contexto 2D para dibujar en el canvas
+        if (!ctx) return; // Si no hay contexto, salimos de la función
         
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        let beams: any[] = []; // Array para almacenar los objetos que representan cada rayo de luz
+        let animationFrameId: number; // Variable para almacenar el ID de la solicitud de animación
 
-        const numberOfParticles = Math.floor((canvas.width * canvas.height) / 5000);
-        particlesRef.current = [];
-        for (let i = 0; i < numberOfParticles; i++) {
-            particlesRef.current.push(new Particle(canvas.width, canvas.height));
-        }
+        // Configuración de los rayos de luz
+        const config = {
+            beamCount: 25, // Cantidad total de rayos de luz en pantalla
+            speed: 1.2, // Velocidad base de movimiento de los rayos
+            hueBase: 220, // Tono base de color (Cyan/Azul)
+            width: 20, // Ancho base de cada rayo
+            blur: 8 // Nivel de desenfoque aplicado al canvas
+        };
 
-        const connect = () => {
-            const connectDistance = 80;
-            let opacityValue = 1;
-            for (let a = 0; a < particlesRef.current.length; a++) {
-                for (let b = a; b < particlesRef.current.length; b++) {
-                    const distance = Math.sqrt(
-                        Math.pow(particlesRef.current[a].x - particlesRef.current[b].x, 2) +
-                        Math.pow(particlesRef.current[a].y - particlesRef.current[b].y, 2)
-                    );
+        const resizeCanvas = () => { // Función para ajustar el tamaño del canvas al contenedor
+            const rect = canvas.parentElement?.getBoundingClientRect(); // Obtenemos las dimensiones del padre
+            if (!rect) return; // Si no hay dimensiones, salimos
+            // Escalado para resoluciones nativas (Retina/High DPI)
+            canvas.width = rect.width * window.devicePixelRatio; // Ajustamos el ancho interno del canvas
+            canvas.height = rect.height * window.devicePixelRatio; // Ajustamos el alto interno del canvas
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio); // Escalamos el contexto para nitidez
+            canvas.style.width = '100%'; // El estilo CSS siempre al 100%
+            canvas.style.height = '100%'; // El estilo CSS siempre al 100%
+        };
 
-                    if (distance < connectDistance) {
-                        opacityValue = 1 - (distance / connectDistance);
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${opacityValue})`;
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.moveTo(particlesRef.current[a].x, particlesRef.current[a].y);
-                        ctx.lineTo(particlesRef.current[b].x, particlesRef.current[b].y);
-                        ctx.stroke();
-                    }
+        const createBeam = () => { // Función para crear un objeto de rayo individual
+            const width = canvas.offsetWidth; // Ancho visible del canvas
+            const height = canvas.offsetHeight; // Alto visible del canvas
+            return {
+                x: Math.random() * width, // Posición X aleatoria
+                y: (Math.random() + 0.2) * height, // Posición Y aleatoria
+                width: config.width + Math.random() * config.width, // Ancho aleatorio basado en config
+                length: height * 9, // Longitud del rayo (larga para efecto de fondo)
+                angle: -35 + Math.random() * 10, // Ángulo de inclinación aleatorio
+                speed: config.speed * (0.6 + Math.random() * 0.8), // Velocidad individual aleatoria
+                opacity: 0.2 + Math.random() * 0.3, // Opacidad base aleatoria
+                hue: config.hueBase + Math.random() * 30, // Color individual dentro del rango
+                pulse: Math.random() * Math.PI * 2, // Fase inicial de la pulsación
+                pulseSpeed: 0.04 + Math.random() * 0.06 // Velocidad de la pulsación de opacidad
+            };
+        };
+
+        const drawBeam = (beam: any) => { // Función para dibujar un rayo específico en el canvas
+            ctx.save(); // Guardamos el estado actual del contexto
+            ctx.translate(beam.x, beam.y); // Movemos el origen al punto del rayo
+            ctx.rotate((beam.angle * Math.PI) / 180); // Rotamos el contexto según el ángulo
+            
+            const pulsingOpacity = beam.opacity * (0.8 + Math.sin(beam.pulse) * 0.2); // Calculamos opacidad con seno
+            const gradient = ctx.createLinearGradient(0, 0, 0, beam.length); // Creamos gradiente lineal
+            
+            const color = (opacity: number) => `hsla(${beam.hue}, 90%, 60%, ${opacity})`; // Función de ayuda para color HSL
+            
+            gradient.addColorStop(0, color(0)); // Inicio del gradiente (transparente)
+            gradient.addColorStop(0.4, color(pulsingOpacity)); // Parte brillante inicial
+            gradient.addColorStop(0.6, color(pulsingOpacity)); // Parte brillante final
+            gradient.addColorStop(1, color(0)); // Fin del gradiente (transparente)
+            
+            ctx.fillStyle = gradient; // Asignamos el gradiente al estilo de relleno
+            ctx.fillRect(-beam.width / 2, 0, beam.width, beam.length); // Dibujamos el rectángulo del rayo
+            ctx.restore(); // Restauramos el estado del contexto
+        };
+
+        const animate = () => { // Bucle principal de animación
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiamos el canvas antes de cada frame
+            ctx.filter = `blur(${config.blur}px)`; // Aplicamos el filtro de desenfoque configurado
+            
+            beams.forEach(beam => { // Iteramos sobre cada rayo
+                beam.y -= beam.speed; // Movemos el rayo hacia arriba
+                beam.pulse += beam.pulseSpeed; // Avanzamos la fase de pulsación
+                
+                if (beam.y + beam.length < -100) { // Si el rayo sale completamente de la pantalla por arriba
+                    beam.y = canvas.offsetHeight + 100; // Lo reposicionamos debajo para que reaparezca
+                    beam.x = Math.random() * canvas.offsetWidth; // Cambiamos su posición X aleatoriamente
                 }
-            }
+                drawBeam(beam); // Dibujamos el rayo actualizado
+            });
+            
+            animationFrameId = requestAnimationFrame(animate); // Solicitamos el siguiente frame de animación
         };
 
-        const animate = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const particle of particlesRef.current) {
-                particle.update(canvas.width, canvas.height);
-                particle.draw(ctx);
-            }
-            connect();
-            animationFrameId.current = requestAnimationFrame(animate);
+        window.addEventListener('resize', resizeCanvas); // Escuchamos cambios de tamaño de ventana
+        resizeCanvas(); // Ejecutamos el redimensionamiento inicial
+        beams = Array.from({ length: config.beamCount }, createBeam); // Inicializamos el array de rayos
+        
+        animate(); // Iniciamos el bucle de animación
+
+        return () => { // Función de limpieza al desmontar
+            window.removeEventListener('resize', resizeCanvas); // Quitamos el listener de redimensionamiento
+            cancelAnimationFrame(animationFrameId); // Cancelamos la solicitud de animación pendiente
         };
+    }, []); // Array de dependencias vacío para ejecutar solo una vez al montar
 
-        animate();
+    return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />; // Retornamos el elemento canvas
+};
 
-        const handleResize = () => {
-            if (canvas) {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                const newNumberOfParticles = Math.floor((canvas.width * canvas.height) / 5000);
-                particlesRef.current = [];
-                 for (let i = 0; i < newNumberOfParticles; i++) {
-                    particlesRef.current.push(new Particle(canvas.width, canvas.height));
+/**
+ * OrionPreloader Component
+ * Componente principal que muestra el logo y la barra de progreso de carga.
+ */
+const OrionPreloader: React.FC<PreloaderProps> = ({ onLoadingComplete }) => { // Definimos el componente con sus props
+    const [percentage, setPercentage] = useState(0); // Estado para controlar el porcentaje de carga (0-100)
+
+    useEffect(() => { // Hook para simular el proceso de carga real o con temporizador
+        const DURATION = 9000; // Duración total de la carga en milisegundos
+
+        const completeTimer = setTimeout(() => { // Temporizador para finalizar la carga
+            onLoadingComplete(); // Ejecutamos el callback de finalización
+        }, DURATION + 600); // Añadimos un pequeño margen después de llegar al 100%
+
+        const percentageInterval = setInterval(() => { // Intervalo para incrementar el porcentaje progresivamente
+            setPercentage(prev => { // Función de actualización basada en el estado anterior
+                const next = prev + 1; // Incrementamos en 1
+                if (next > 100) { // Si llegamos a 100, detenemos el intervalo
+                    clearInterval(percentageInterval); // Limpiamos el intervalo
+                    return 100; // Devolvemos 100
                 }
-            }
-        };
+                return next; // Devolvemos el nuevo valor incrementado
+            });
+        }, DURATION / 100); // Calculamos el tiempo por cada 1% para que dure exactamente DURATION
 
-        window.addEventListener('resize', handleResize);
-
-        return () => {
-            clearTimeout(completeTimer);
-            clearInterval(percentageInterval);
-            if (animationFrameId.current) {
-                cancelAnimationFrame(animationFrameId.current);
-            }
-            window.removeEventListener('resize', handleResize);
+        return () => { // Función de limpieza al desmontar
+            clearTimeout(completeTimer); // Cancelamos el temporizador de finalización
+            clearInterval(percentageInterval); // Limpiamos el intervalo de porcentaje
         };
-    }, [onLoadingComplete]);
+    }, [onLoadingComplete]); // Re-ejecutar si la función callback cambia
 
     return (
-        <PreloaderContainer>
-            <Canvas ref={canvasRef} />
-            <Logo 
-                src="https://i.postimg.cc/TYmLPPGk/Generated-Image-October-17-2025-12-49-AM-2.png"
-                alt="Cargando Orion ERP"
-            />
-            <LoadingContainer>
-                <PercentageText>{percentage}%</PercentageText>
-                <SpinningGear>
-                    <GearIcon />
-                </SpinningGear>
-            </LoadingContainer>
-        </PreloaderContainer>
+        <div className="fixed inset-0 z-[9999] bg-[#0B0B0B] flex flex-col items-center justify-center overflow-hidden font-sans"> {/* Contenedor principal a pantalla completa */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0"> {/* Capa de fondo absoluto */}
+                <BeamsBackground /> {/* Insertamos el fondo de rayos animados */}
+            </div>
+
+            <div className="relative z-10 flex flex-col items-center w-full max-w-sm px-6"> {/* Contenedor de contenido central */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }} // Estado inicial para animación de entrada
+                    animate={{ opacity: 1, y: 0 }} // Estado final animado
+                    transition={{ duration: 0.6, ease: "easeOut" }} // Configuración de la transición
+                    className="text-center w-full"
+                >
+                    <img 
+                        src='https://i.postimg.cc/CxKZJXKz/logo.gif' // Fuente de la imagen del logo gif
+                        alt="Orion ERP Logo" // Texto alternativo para accesibilidad
+                        className="w-72 mx-auto mb-12 drop-shadow-[0_0_15px_rgba(24,190,219,0.3)]" // Estilos y sombra brillante
+                    />
+
+                    <div className="mb-8 relative w-full flex flex-col items-center"> {/* Contenedor de barra de progreso */}
+                        <div className="flex items-center justify-between w-full mb-3 px-1"> {/* Textos arriba de la barra */}
+                            <span className="text-[#18bedb] text-sm font-bold tracking-widest uppercase">Cargando Módulos</span> {/* Etiqueta de estado */}
+                            <span className="text-white text-sm font-bold">{percentage}%</span> {/* Indicador numérico actual */}
+                        </div>
+                        
+                        <div className="w-full h-1.5 bg-[#143e88] rounded-full overflow-hidden"> {/* Fondo de la barra de progreso */}
+                            <motion.div 
+                                className="h-full bg-[#18bedb] rounded-full" // Color de la barra activa
+                                initial={{ width: "0%" }} // Comienza sin ancho
+                                animate={{ width: `${percentage}%` }} // Se estira según el porcentaje actual
+                                transition={{ duration: 0.1, ease: "linear" }} // Transición suave y lineal
+                            />
+                        </div>
+                    </div>
+
+                    <motion.div 
+                        initial={{ opacity: 0 }} // Animación de aparición suave para el texto extra
+                        animate={{ opacity: 1 }} // Estado visible
+                        transition={{ delay: 0.4, duration: 0.5 }} // Retraso para que el logo aparezca primero
+                        className="flex items-center justify-center gap-2 text-blue-200/70" // Estilos de contenedor flex
+                    >
+                        <Loader2 className="animate-spin w-4 h-4" /> {/* Icono de spinner rotando */}
+                        <span className="text-xs tracking-wider uppercase font-medium">Iniciando plataforma segura...</span> {/* Mensaje secundario */}
+                    </motion.div>
+                </motion.div>
+            </div>
+        </div>
     );
 };
 
-export default OrionPreloader;
+export default OrionPreloader; // Exportación por defecto para usar en el resto de la aplicación

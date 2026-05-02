@@ -1,85 +1,34 @@
 import React, { useState } from 'react';
 import { useAppContext, User } from '../context/AppContext';
+import { motion, AnimatePresence } from 'motion/react';
+import { Mail, User as UserIcon, ArrowLeft, Loader2, Globe } from 'lucide-react';
 
-// Fondo artesanal: sol, colinas y grano sutil
-const CountrysideBackdrop = () => (
-    <div className="hg-backdrop" aria-hidden="true">
-        <div className="hg-backdrop__sun" />
-        <div className="hg-backdrop__hill hg-backdrop__hill--near" />
-        <div className="hg-backdrop__hill hg-backdrop__hill--far" />
-        <div className="hg-backdrop__grain" />
-    </div>
-);
-
-
-// Reusable Input Component
-interface InputProps {
-    id: string;
-    label: string;
-    type: string;
-    placeholder: string;
-    value: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    error?: string;
-}
-
-const Input: React.FC<InputProps> = ({ id, label, type, placeholder, value, onChange, error }) => (
-    <div className="hg-field">
-        <label htmlFor={id} className="hg-label">{label}</label>
-        <input
-            id={id}
-            name={id}
-            type={type}
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            className={`hg-input${error ? ' hg-input--error' : ''}`}
-            aria-invalid={!!error}
-            aria-describedby={error ? `${id}-error` : undefined}
-        />
-        {error && (
-            <p id={`${id}-error`} className="hg-error" role="alert">{error}</p>
-        )}
-    </div>
-);
-
-// Main Component
 const LoginRegister: React.FC = () => {
     const { login, registerUser } = useAppContext();
 
-    // State for different views
-    const [view, setView] = useState<'main' | 'forgotPassword' | 'newPassword'>('main');
-    
-    // Form States
+    const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
     const [loginData, setLoginData] = useState({ email: '', password: '' });
     const [registerData, setRegisterData] = useState({
         nombres: '', apellidos: '', email: '', telefono: '', password: '', confirmPassword: ''
     });
-    const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
-    const [newPasswordData, setNewPasswordData] = useState({ newPassword: '', confirmNewPassword: '' });
-
-    // UI States
+    
     const [errors, setErrors] = useState<any>({});
-    const [showPassword, setShowPassword] = useState(false);
     const [notification, setNotification] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
-    // Handlers for input changes
     const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setLoginData({ ...loginData, [e.target.name]: e.target.value });
     };
+    
     const handleRegisterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setRegisterData({ ...registerData, [e.target.name]: e.target.value });
     };
 
-    // Generic notification handler
-    const showNotification = (message: string) => {
+    const showNotificationMsg = (message: string) => {
         setNotification(message);
         setTimeout(() => setNotification(null), 5000);
     };
-    
-    // Form Submission Handlers
+
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const newErrors: any = {};
@@ -132,362 +81,217 @@ const LoginRegister: React.FC = () => {
 
         try {
             const result = await registerUser(newUser);
-
             if (result.success) {
-                showNotification("Su perfil se ha registrado exitosamente");
+                showNotificationMsg("Su perfil se ha registrado exitosamente");
+                setAuthMode('login');
             } else {
-                setErrors({ email: result.message });
+                setErrors({ form: result.message });
             }
         } finally {
             setIsLoading(false);
         }
     };
-    
-    const handleForgotPasswordSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!forgotPasswordEmail) {
-            setErrors({ email: "Campo Obligatorio" });
-            return;
-        }
-        setErrors({});
-        // Mock check - in a real app, you'd check against your user database
-        const isRegistered = true; // Replace with actual check
-        if (isRegistered) {
-            showNotification("Te enviaremos un correo electronico para que puedas recuperar tu contraseña");
-            setTimeout(() => setView('newPassword'), 1000);
-        } else {
-            showNotification("Este correo no esta registrado, verifica tus datos o registrate para continuar.");
-        }
-    };
-
-    const handleNewPasswordSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const newErrors: any = {};
-        if (!newPasswordData.newPassword) newErrors.newPassword = "Campo Obligatorio";
-        if (!newPasswordData.confirmNewPassword) newErrors.confirmNewPassword = "Campo Obligatorio";
-        
-        if (newPasswordData.newPassword && newPasswordData.newPassword !== newPasswordData.confirmNewPassword) {
-            newErrors.form = "Las contraseñas no coinciden, por favor intentelo nuevamente.";
-        }
-        
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
-            return;
-        }
-        
-        setErrors({});
-        showNotification("Su contraseña se ha actualizado correctamente");
-        setTimeout(() => setView('main'), 1000);
-    };
-    
-    // View Renderers
-    const renderMainView = () => (
-        authMode === 'login' ? (
-            <div className="hg-card hg-card--single hg-card--glass hg-animate-in">
-                <div className="hg-card__panel hg-card__panel--brand">
-                    <div className="hg-brand">
-                        <div className="hg-badge">Desde 1984</div>
-                        <h2 className="hg-brand__title">Bienvenido de nuevo</h2>
-                        <p className="hg-brand__copy">Ingresa para seguir disfrutando de productos elaborados con dedicación artesanal.</p>
-                    </div>
-                </div>
-                <div className="hg-card__panel hg-card__panel--forms">
-                    <div className="hg-form-block">
-                        <h3 className="hg-section">Clientes registrados</h3>
-                        <form onSubmit={handleLoginSubmit} noValidate>
-                            <Input id="email" label="Correo electrónico" type="email" placeholder="correo@ejemplo.com" value={loginData.email} onChange={handleLoginChange} error={errors.email} />
-                            <Input id="password" label="Contraseña" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={loginData.password} onChange={handleLoginChange} error={errors.password} />
-                            <div className="hg-row">
-                                <label className="hg-check">
-                                    <input type="checkbox" checked={showPassword} onChange={() => setShowPassword(!showPassword)} />
-                                    <span>Mostrar contraseña</span>
-                                </label>
-                                <button type="button" className="hg-link" onClick={() => { setView('forgotPassword'); setErrors({}); }}>¿Olvidaste tu contraseña?</button>
-                            </div>
-                            {errors.form && <p className="hg-error hg-error--center">{errors.form}</p>}
-                            <button type="submit" disabled={isLoading} className="hg-btn hg-btn--primary" aria-busy={isLoading}>
-                                {isLoading ? 'Iniciando sesión…' : 'Iniciar sesión'}
-                            </button>
-                        </form>
-                        <p className="hg-muted hg-center" style={{ marginTop: 10 }}>
-                            ¿No tienes cuenta? <button className="hg-link" type="button" onClick={() => { setErrors({}); setAuthMode('register'); }}>Regístrate</button>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        ) : (
-            <div className="hg-card hg-card--single hg-card--glass hg-animate-in">
-                <div className="hg-card__panel hg-card__panel--brand">
-                    <div className="hg-brand">
-                        <div className="hg-badge">Hecho con dedicación</div>
-                        <h2 className="hg-brand__title">Crea tu cuenta</h2>
-                        <p className="hg-brand__copy">Accede a beneficios, pedidos rápidos y experiencias de temporada.</p>
-                    </div>
-                </div>
-                <div className="hg-card__panel hg-card__panel--forms">
-                    <div className="hg-form-block">
-                        <h3 className="hg-section">Nuevos clientes</h3>
-                        <form onSubmit={handleRegisterSubmit} noValidate>
-                            <div className="hg-grid-2">
-                                <Input id="nombres" label="Nombres" type="text" placeholder="María" value={registerData.nombres} onChange={handleRegisterChange} error={errors.nombres} />
-                                <Input id="apellidos" label="Apellidos" type="text" placeholder="González" value={registerData.apellidos} onChange={handleRegisterChange} error={errors.apellidos} />
-                            </div>
-                            <Input id="email" label="Correo electrónico" type="email" placeholder="correo@ejemplo.com" value={registerData.email} onChange={handleRegisterChange} error={errors.email} />
-                            <Input id="telefono" label="Teléfono de contacto" type="tel" placeholder="3101234567" value={registerData.telefono} onChange={handleRegisterChange} error={errors.telefono} />
-                            <div className="hg-grid-2">
-                                <Input id="password" label="Contraseña" type="password" placeholder="••••••••" value={registerData.password} onChange={handleRegisterChange} error={errors.password} />
-                                <Input id="confirmPassword" label="Confirmar contraseña" type="password" placeholder="••••••••" value={registerData.confirmPassword} onChange={handleRegisterChange} error={errors.confirmPassword} />
-                            </div>
-                            <button type="submit" disabled={isLoading} className="hg-btn hg-btn--accent" aria-busy={isLoading}>
-                                {isLoading ? 'Registrando…' : 'Regístrate'}
-                            </button>
-                        </form>
-                        <p className="hg-muted hg-center" style={{ marginTop: 10 }}>
-                            ¿Ya tienes cuenta? <button className="hg-link" type="button" onClick={() => { setErrors({}); setAuthMode('login'); }}>Inicia sesión</button>
-                        </p>
-                    </div>
-                </div>
-            </div>
-        )
-    );
-    
-    const renderForgotPasswordView = () => (
-        <div className="hg-modal">
-            <h2 className="hg-modal__title">Recuperar contraseña</h2>
-            <p className="hg-muted hg-center">Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</p>
-            <form onSubmit={handleForgotPasswordSubmit} noValidate>
-                <Input id="email" label="Correo electrónico" type="email" placeholder="correo@ejemplo.com" value={forgotPasswordEmail} onChange={(e) => setForgotPasswordEmail(e.target.value)} error={errors.email} />
-                <button type="submit" className="hg-btn hg-btn--primary">Enviar correo</button>
-                <button type="button" onClick={() => { setView('main'); setErrors({}); }} className="hg-link hg-link--block">Volver a iniciar sesión</button>
-            </form>
-        </div>
-    );
-    
-    const renderNewPasswordView = () => (
-        <div className="hg-modal">
-            <h2 className="hg-modal__title">Nueva contraseña</h2>
-            <form onSubmit={handleNewPasswordSubmit} noValidate>
-                <Input id="newPassword" label="Nueva contraseña" type="password" placeholder="••••••••" value={newPasswordData.newPassword} onChange={(e) => setNewPasswordData({ ...newPasswordData, newPassword: e.target.value })} error={errors.newPassword} />
-                <Input id="confirmNewPassword" label="Confirmar nueva contraseña" type="password" placeholder="••••••••" value={newPasswordData.confirmNewPassword} onChange={(e) => setNewPasswordData({ ...newPasswordData, confirmNewPassword: e.target.value })} error={errors.confirmNewPassword} />
-                {errors.form && <p className="hg-error hg-error--center">{errors.form}</p>}
-                <button type="submit" className="hg-btn hg-btn--primary">Enviar</button>
-            </form>
-        </div>
-    );
 
     return (
-        <div className="hg-auth">
-            <CountrysideBackdrop />
+        <div className="min-h-[calc(100vh-80px)] bg-[var(--color-bg-main)] flex items-center justify-center p-6 md:p-12 font-sans relative">
             {notification && (
-                <div className="hg-toast" role="status" aria-live="polite">{notification}</div>
+                <motion.div 
+                    initial={{ opacity: 0, y: -20, x: '-50%' }}
+                    animate={{ opacity: 1, y: 0, x: '-50%' }}
+                    exit={{ opacity: 0, y: -20, x: '-50%' }}
+                    className="fixed top-24 left-1/2 z-[2001] bg-[var(--color-dark)] text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-medium tracking-wide"
+                >
+                    {notification}
+                </motion.div>
             )}
-            <div className="hg-stage">
-                {view === 'main' && renderMainView()}
-                {view === 'forgotPassword' && renderForgotPasswordView()}
-                {view === 'newPassword' && renderNewPasswordView()}
+
+            {/* Main Container */}
+            <div className="relative w-full max-w-[95vw] md:max-w-[85vw] lg:max-w-[75vw] min-h-[650px] md:min-h-[700px] lg:min-h-[80vh] bg-white rounded-[32px] md:rounded-[48px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] overflow-hidden flex flex-col md:flex-row transform transition-all duration-500 my-8">
+                
+                {/* Forms Area */}
+                <div className="relative w-full flex-1 min-h-[650px] md:min-h-full">
+                    
+                    {/* Sign Up Section */}
+                    <div className={`absolute top-0 left-0 w-full md:w-1/2 h-full transition-all duration-700 ease-in-out ${authMode === 'register' ? 'md:translate-x-full opacity-100 z-[5] animate-[move_0.6s]' : 'opacity-0 z-[1] pointer-events-none'}`}>
+                        <form onSubmit={handleRegisterSubmit} className="bg-white flex flex-col items-center justify-center px-6 md:px-12 lg:px-20 min-h-full w-full text-center py-12">
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-dark)] mb-3 leading-tight tracking-tight">Crear Cuenta</h1>
+                                <div className="flex justify-center gap-4 mb-6">
+                                    <button type="button" className="w-11 h-11 border border-stone-200 rounded-2xl flex items-center justify-center hover:bg-stone-50 hover:border-[var(--color-primary)] transition-all duration-300"><Mail size={18} className="text-stone-600" /></button>
+                                    <button type="button" className="w-11 h-11 border border-stone-200 rounded-2xl flex items-center justify-center hover:bg-stone-50 hover:border-[var(--color-primary)] transition-all duration-300"><Globe size={18} className="text-stone-600" /></button>
+                                </div>
+                                <span className="text-[10px] text-stone-400 mb-6 block uppercase tracking-[0.2em] font-semibold">Regístrate con tu email</span>
+                            </motion.div>
+                            
+                            <div className="w-full flex flex-col gap-3 max-w-sm">
+                                <div className="relative group">
+                                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[var(--color-primary)] transition-colors" size={16} />
+                                    <input 
+                                        type="text" name="nombres" placeholder="Nombre completo" 
+                                        className="w-full bg-[var(--color-bg-soft)] border-2 border-transparent py-3 pl-12 pr-4 text-sm rounded-2xl focus:bg-white focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all duration-300"
+                                        value={registerData.nombres} onChange={handleRegisterChange}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <input 
+                                        type="tel" name="telefono" placeholder="WhatsApp" 
+                                        className="bg-[var(--color-bg-soft)] border-2 border-transparent py-3 px-5 text-sm rounded-2xl focus:bg-white focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all duration-300"
+                                        value={registerData.telefono} onChange={handleRegisterChange}
+                                    />
+                                    <input 
+                                        type="email" name="email" placeholder="Email institucional" 
+                                        className="bg-[var(--color-bg-soft)] border-2 border-transparent py-3 px-5 text-sm rounded-2xl focus:bg-white focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all duration-300"
+                                        value={registerData.email} onChange={handleRegisterChange}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <input 
+                                        type="password" name="password" placeholder="Contraseña" 
+                                        className="bg-[var(--color-bg-soft)] border-2 border-transparent py-3 px-5 text-sm rounded-2xl focus:bg-white focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all duration-300"
+                                        value={registerData.password} onChange={handleRegisterChange}
+                                    />
+                                    <input 
+                                        type="password" name="confirmPassword" placeholder="Confirmar" 
+                                        className="bg-[var(--color-bg-soft)] border-2 border-transparent py-3 px-5 text-sm rounded-2xl focus:bg-white focus:border-[var(--color-primary)] focus:ring-0 outline-none transition-all duration-300"
+                                        value={registerData.confirmPassword} onChange={handleRegisterChange}
+                                    />
+                                </div>
+                            </div>
+
+                            {errors.form && <p className="text-red-500 text-[11px] mt-4 font-semibold bg-red-50 py-2 px-4 rounded-lg">{errors.form}</p>}
+                            
+                            <button 
+                                type="submit" disabled={isLoading}
+                                className="w-full max-w-xs bg-[var(--color-primary)] text-[var(--color-secondary)] text-xs font-bold py-4 px-12 rounded-2xl uppercase tracking-[0.15em] mt-8 hover:bg-[var(--color-accent)] transition-all active:scale-[0.98] shadow-xl shadow-[var(--color-primary)]/20 flex items-center justify-center gap-3"
+                            >
+                                {isLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                Crear Cuenta
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Sign In Section */}
+                    <div className={`absolute top-0 left-0 w-full md:w-1/2 h-full transition-all duration-700 ease-in-out ${authMode === 'register' ? 'md:translate-x-full opacity-0 pointer-events-none' : 'z-[2] opacity-100'}`}>
+                        <form onSubmit={handleLoginSubmit} className="bg-white flex flex-col items-center justify-center px-6 md:px-12 lg:px-20 min-h-full w-full text-center py-12">
+                            <motion.div 
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                            >
+                                <h1 className="text-3xl md:text-4xl font-bold text-[var(--color-dark)] mb-3 tracking-tight">Iniciar Sesión</h1>
+                                <div className="flex justify-center gap-4 mb-6">
+                                    <button type="button" className="w-11 h-11 border border-stone-200 rounded-2xl flex items-center justify-center hover:bg-stone-50 hover:border-[var(--color-primary)] transition-all duration-300"><Mail size={18} className="text-stone-600" /></button>
+                                    <button type="button" className="w-11 h-11 border border-stone-200 rounded-2xl flex items-center justify-center hover:bg-stone-50 hover:border-[var(--color-primary)] transition-all duration-300"><Globe size={18} className="text-stone-600" /></button>
+                                </div>
+                                <span className="text-[10px] text-stone-400 mb-8 block uppercase tracking-[0.2em] font-semibold">Usa tus credenciales</span>
+                            </motion.div>
+                            
+                            <div className="w-full flex flex-col gap-4 max-w-xs">
+                                <div className="relative group">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[var(--color-secondary)] transition-colors" size={16} />
+                                    <input 
+                                        type="email" name="email" placeholder="Correo electrónico" 
+                                        className="w-full bg-[var(--color-bg-soft)] border-2 border-transparent py-4 pl-12 pr-4 text-sm rounded-2xl focus:bg-white focus:border-[var(--color-secondary)] focus:ring-0 outline-none transition-all duration-300"
+                                        value={loginData.email} onChange={handleLoginChange}
+                                    />
+                                </div>
+                                <div className="relative group">
+                                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-focus-within:text-[var(--color-secondary)] transition-colors" size={16} />
+                                    <input 
+                                        type="password" name="password" placeholder="Contraseña de acceso" 
+                                        className="w-full bg-[var(--color-bg-soft)] border-2 border-transparent py-4 pl-12 pr-4 text-sm rounded-2xl focus:bg-white focus:border-[var(--color-secondary)] focus:ring-0 outline-none transition-all duration-300"
+                                        value={loginData.password} onChange={handleLoginChange}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <a href="#" className="text-stone-400 text-[11px] mt-6 hover:text-[var(--color-secondary)] transition-colors font-medium border-b border-transparent hover:border-stone-300 pb-0.5">¿Olvidaste tu contraseña?</a>
+
+                            {errors.form && <p className="text-red-500 text-[11px] mt-4 font-semibold bg-red-50 py-2 px-4 rounded-lg">{errors.form}</p>}
+                            
+                            <button 
+                                type="submit" disabled={isLoading}
+                                className="w-full max-w-xs bg-[var(--color-secondary)] text-white text-xs font-bold py-4 px-12 rounded-2xl uppercase tracking-[0.15em] mt-8 hover:bg-[var(--color-dark)] transition-all active:scale-[0.98] shadow-xl shadow-[var(--color-secondary)]/20 flex items-center justify-center gap-3"
+                            >
+                                {isLoading ? <Loader2 size={16} className="animate-spin" /> : null}
+                                Entrar Ahora
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+
+                {/* Toggle Overlay Container */}
+                <div className={`hidden md:block absolute top-0 left-1/2 w-1/2 h-full overflow-hidden transition-all duration-700 ease-in-out z-[100] ${authMode === 'register' ? '-translate-x-full rounded-r-[60px] md:rounded-r-[120px]' : 'rounded-l-[60px] md:rounded-l-[120px]'}`}>
+                    <div className={`bg-gradient-to-br from-[var(--color-secondary)] via-[#3e2e21] to-[var(--color-dark)] text-white relative left-[-100%] h-full w-[200%] transition-all duration-700 ease-in-out ${authMode === 'register' ? 'translate-x-1/2' : 'translate-x-0'}`}>
+                        {/* Grain effect overlay */}
+                        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/pinstriped-suit.png')]"></div>
+                        
+                        <div className="absolute top-0 h-full w-full flex">
+                            
+                            {/* Toggle Left Panel */}
+                            <div className={`absolute top-0 h-full w-1/2 flex flex-col items-center justify-center px-16 text-center transition-all duration-700 ${authMode === 'register' ? 'translate-x-0' : '-translate-x-[200%]'}`}>
+                                <motion.div 
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ duration: 0.8 }}
+                                    className="mb-8"
+                                >
+                                    <img src="https://i.postimg.cc/kDrPRRWy/Gemini-Generated-Image-s055fas055fas055.png" alt="Hato Grande" className="h-32 md:h-40 transition-all duration-300" />
+                                </motion.div>
+                                <h1 className="text-4xl font-bold mb-6 tracking-tight">¡Bienvenido!</h1>
+                                <p className="text-sm text-stone-300 leading-[1.8] mb-10 font-light max-w-xs">Ingresa con tus datos personales para acceder a todas las funciones y beneficios de nuestra tienda artesanal.</p>
+                                <button 
+                                    onClick={() => setAuthMode('login')}
+                                    className="bg-transparent border-2 border-white/40 text-white text-[11px] font-bold py-4 px-14 rounded-2xl uppercase tracking-[0.2em] hover:bg-white hover:text-[var(--color-secondary)] hover:border-white transition-all duration-500 active:scale-95"
+                                >
+                                    Iniciar Sesión
+                                </button>
+                            </div>
+
+                            {/* Toggle Right Panel */}
+                            <div className={`absolute top-0 right-0 h-full w-1/2 flex flex-col items-center justify-center px-16 text-center transition-all duration-700 ${authMode === 'register' ? 'translate-x-[200%]' : 'translate-x-0'}`}>
+                                <motion.div 
+                                    initial={{ scale: 0.9, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ duration: 0.8 }}
+                                    className="mb-8"
+                                >
+                                    <img src="https://i.postimg.cc/MZVdPpF7/Generated-Image-October-20-2025-3-45-PM-1.png" alt="Hato Grande" className="h-32 md:h-40 transition-all duration-300" />
+                                </motion.div>
+                                <h1 className="text-4xl font-bold mb-6 tracking-tight">Crea tu Perfil</h1>
+                                <p className="text-sm text-stone-300 leading-[1.8] mb-10 font-light max-w-xs">Sé parte de Hato Grande y disfruta de los lácteos más frescos del llano directamente en tu mesa.</p>
+                                <button 
+                                    onClick={() => setAuthMode('register')}
+                                    className="bg-transparent border-2 border-white/40 text-white text-[11px] font-bold py-4 px-14 rounded-2xl uppercase tracking-[0.2em] hover:bg-white hover:text-[var(--color-secondary)] hover:border-white transition-all duration-500 active:scale-95"
+                                >
+                                    Registrarme
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile version simple toggle button (visible only on small screens) */}
+                <div className="md:hidden absolute bottom-8 left-1/2 -translate-x-1/2 z-[101] w-full px-8">
+                     <button 
+                        onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                        className="w-full bg-[var(--color-bg-soft)] backdrop-blur-md text-[var(--color-secondary)] text-[10px] font-bold py-4 px-6 rounded-2xl uppercase tracking-widest border border-[var(--color-secondary)]/10 shadow-lg"
+                    >
+                        {authMode === 'login' ? '¿Sin cuenta? Regístrate aquí' : '¿Ya tienes cuenta? Entra aquí'}
+                    </button>
+                </div>
+
             </div>
-            <style>{`
-                .hg-auth {
-                    position: relative;
-                    min-height: calc(100vh - 160px);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 48px 16px;
-                    overflow: hidden;
-                }
-                .hg-stage {
-                    position: relative;
-                    z-index: 2;
-                    width: 100%;
-                    max-width: 1100px;
-                    display: flex;
-                    justify-content: center;
-                }
-                /* Backdrop */
-                .hg-backdrop {
-                    position: absolute;
-                    inset: 0;
-                    z-index: 1;
-                    pointer-events: none;
-                }
-                .hg-backdrop__sun {
-                    position: absolute;
-                    width: 520px;
-                    height: 520px;
-                    left: -120px;
-                    top: -160px;
-                    background: radial-gradient(circle at 60% 50%, rgba(217,184,20,0.35), rgba(217,165,11,0.15) 45%, rgba(217,165,11,0.05) 70%, transparent 75%);
-                    filter: blur(2px);
-                    border-radius: 50%;
-                }
-                .hg-backdrop__hill {
-                    position: absolute;
-                    left: -10%;
-                    right: -10%;
-                    height: 38%;
-                    bottom: -8%;
-                    background: linear-gradient(180deg, rgba(89,67,2,0.15), rgba(89,67,2,0.28));
-                    border-top-left-radius: 50% 100%;
-                    border-top-right-radius: 50% 100%;
-                }
-                .hg-backdrop__hill--far { transform: translateY(18px) scale(1.08); opacity: 0.65; }
-                .hg-backdrop__hill--near { transform: translateY(0); opacity: 0.9; }
-                .hg-backdrop__grain {
-                    position: absolute;
-                    inset: 0;
-                    background-image: 
-                        linear-gradient(transparent 96%, rgba(0,0,0,0.02) 100%),
-                        radial-gradient(rgba(0,0,0,0.02) 1px, transparent 1px);
-                    background-size: 100% 6px, 6px 6px;
-                    mix-blend-mode: multiply;
-                    opacity: 0.6;
-                }
-                /* Card */
-                .hg-card {
-                    display: grid;
-                    grid-template-columns: 1.1fr 1.4fr;
-                    gap: 0;
-                    width: 100%;
-                    border-radius: 18px;
-                    overflow: hidden;
-                    position: relative;
-                }
-                .hg-card--glass {
-                    background: linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0.24));
-                    border: 1px solid rgba(255,255,255,0.35);
-                    box-shadow: 0 20px 50px rgba(64,52,52,0.18), inset 0 1px 0 rgba(255,255,255,0.4);
-                    backdrop-filter: saturate(120%) blur(14px);
-                    -webkit-backdrop-filter: saturate(120%) blur(14px);
-                }
-                .hg-animate-in { animation: hg-pop-in 320ms cubic-bezier(.2,.7,.2,1) both; }
-                @keyframes hg-pop-in {
-                    0% { opacity: 0; transform: translateY(10px) scale(0.985); }
-                    100% { opacity: 1; transform: translateY(0) scale(1); }
-                }
-                .hg-card__panel { padding: 28px; }
-                .hg-card__panel--brand {
-                    background: linear-gradient(180deg, rgba(217,184,20,0.22), rgba(217,165,11,0.10));
-                    position: relative;
-                }
-                .hg-card__panel--forms { background: rgba(255,255,255,0.65); }
-                .hg-brand {
-                    max-width: 420px;
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    gap: 16px;
-                }
-                .hg-badge {
-                    display: inline-block;
-                    align-self: flex-start;
-                    padding: 6px 10px;
-                    border-radius: 999px;
-                    background: rgba(89,67,2,0.08);
-                    color: var(--color-secondary);
-                    font-weight: 600;
-                    font-size: 12px;
-                    letter-spacing: 0.4px;
-                }
-                .hg-brand__title {
-                    margin: 0;
-                    font-size: 28px;
-                    line-height: 1.2;
-                    color: var(--color-dark);
-                    text-wrap: balance;
-                }
-                .hg-brand__copy { color: var(--color-text); margin: 0; opacity: 0.9; }
-                .hg-brand__list { margin: 6px 0 0; padding-left: 18px; color: var(--color-secondary); }
-                .hg-brand__list li { margin: 6px 0; }
-                /* Forms */
-                .hg-form-block { padding: 12px 8px; }
-                .hg-section { margin: 0 0 12px; font-size: 20px; color: var(--color-dark); }
-                .hg-muted { color: rgba(64,52,52,0.75); margin: 0 0 12px; font-size: 14px; }
-                .hg-center { text-align: center; }
-                .hg-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-                .hg-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 0 12px; }
-                .hg-check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; color: var(--color-text); }
-                .hg-check input { width: 16px; height: 16px; accent-color: var(--color-secondary); }
-                .hg-link { background: none; border: none; color: var(--color-secondary); font-weight: 600; cursor: pointer; padding: 0; }
-                .hg-link:hover { color: var(--color-accent); }
-                .hg-link--block { display: block; width: 100%; text-align: center; margin-top: 10px; }
-                .hg-divider { height: 1px; background: rgba(64,52,52,0.08); margin: 8px 0; }
-                /* Fields */
-                .hg-field { margin-bottom: 10px; }
-                .hg-label { display: block; font-weight: 700; font-size: 13px; color: var(--color-dark); margin-bottom: 6px; }
-                .hg-input {
-                    width: 100%;
-                    padding: 12px 14px;
-                    border: 1px solid rgba(64,52,52,0.22);
-                    border-radius: 10px;
-                    background: #fff;
-                    color: #424242;
-                    outline: none;
-                    transition: box-shadow 180ms ease, border-color 180ms ease, transform 120ms ease;
-                }
-                .hg-input::placeholder { color: #bcbcbc; }
-                .hg-input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(217,184,20,0.25); }
-                .hg-input--error { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.15); }
-                .hg-error { color: #b91c1c; font-size: 12px; margin: 4px 0 0; }
-                .hg-error--center { text-align: center; margin-bottom: 8px; }
-                /* Buttons */
-                .hg-btn {
-                    width: 100%;
-                    padding: 12px 16px;
-                    border-radius: 999px;
-                    border: none;
-                    font-weight: 700;
-                    color: var(--color-dark);
-                    cursor: pointer;
-                    transition: transform 120ms ease, box-shadow 180ms ease, background 180ms ease, opacity 180ms ease;
-                    box-shadow: 0 8px 16px rgba(64,52,52,0.08);
-                }
-                .hg-btn:active { transform: translateY(1px); }
-                .hg-btn[disabled] { opacity: 0.6; cursor: progress; }
-                .hg-btn--primary { background: var(--color-primary); }
-                .hg-btn--primary:hover { background: var(--color-accent); }
-                .hg-btn--accent { background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); }
-                .hg-btn--accent:hover { filter: brightness(1.02); }
-                /* Modal */
-                .hg-modal {
-                    width: 100%;
-                    max-width: 520px;
-                    background: #fff;
-                    border-radius: 16px;
-                    padding: 26px;
-                    box-shadow: 0 20px 50px rgba(64,52,52,0.18);
-                }
-                .hg-modal__title { margin: 0 0 6px; font-size: 22px; color: var(--color-dark); text-align: center; }
-                /* Toast */
-                .hg-toast {
-                    position: fixed;
-                    top: 18px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: #effaf0;
-                    color: #166534;
-                    border: 1px solid #bbf7d0;
-                    padding: 10px 14px;
-                    border-radius: 10px;
-                    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
-                    z-index: 5;
-                    animation: hg-fade 4800ms ease-in-out forwards;
-                }
-                @keyframes hg-fade {
-                    0% { opacity: 0; transform: translate(-50%, -8px); }
-                    10% { opacity: 1; transform: translate(-50%, 0); }
-                    90% { opacity: 1; transform: translate(-50%, 0); }
-                    100% { opacity: 0; transform: translate(-50%, -8px); }
-                }
-                /* Responsive */
-                @media (max-width: 960px) {
-                    .hg-card { grid-template-columns: 1fr; }
-                    .hg-card__panel { padding: 22px; }
-                    .hg-grid-2 { grid-template-columns: 1fr; }
-                    .hg-brand { max-width: none; }
-                }
-            `}</style>
+
+            {/* Background Details */}
+            <div className="fixed top-0 right-0 -z-10 w-[800px] h-[800px] bg-[var(--color-primary)] opacity-[0.04] rounded-full blur-[120px] translate-x-1/3 -translate-y-1/2 pointer-events-none"></div>
+            <div className="fixed bottom-0 left-0 -z-10 w-[800px] h-[800px] bg-[var(--color-secondary)] opacity-[0.04] rounded-full blur-[120px] -translate-x-1/3 translate-y-1/2 pointer-events-none"></div>
         </div>
     );
 };

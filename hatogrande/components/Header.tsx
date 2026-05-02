@@ -7,8 +7,18 @@ const Header: React.FC = () => {
     const [isProductsOpen, setIsProductsOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [isHeaderHovered, setIsHeaderHovered] = useState(false);
     const userMenuRef = useRef<HTMLDivElement>(null);
     const productsMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 20);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
 
     const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
@@ -50,7 +60,7 @@ const Header: React.FC = () => {
         const [showMobileProducts, setShowMobileProducts] = useState(false);
 
         return (
-            <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm md:hidden">
+            <div className="fixed inset-0 z-[2000] bg-white/95 backdrop-blur-sm md:hidden">
                 <div className="flex justify-between items-center p-4 border-b">
                      <button onClick={() => handleNavClick('home')} className="flex items-center">
                         <img src="https://i.postimg.cc/kDrPRRWy/Gemini-Generated-Image-s055fas055fas055.png" alt="Hato Grande Logo" className="h-12 w-auto" />
@@ -101,8 +111,18 @@ const Header: React.FC = () => {
 
     return (
         <>
-        <header className="sticky top-0 z-40 w-full py-3 px-6 sm:px-12 lg:px-24">
-            <div className="bg-white/60 backdrop-blur-lg rounded-full shadow-lg flex items-center justify-between px-6 py-2 transition-all duration-300 hover:bg-white">
+        {/* Backdrop for out-of-focus effect */}
+        <div 
+            className={`fixed inset-0 bg-white/20 backdrop-blur-[8px] z-[999] transition-opacity duration-300 pointer-events-none ${
+                isScrolled && isHeaderHovered ? 'opacity-100' : 'opacity-0'
+            }`}
+        />
+        <header className={`sticky top-0 z-[1000] w-full transition-all duration-300 ${isScrolled ? 'py-3 px-6 sm:px-12 lg:px-24' : 'p-0'}`}>
+            <div 
+                onMouseEnter={() => setIsHeaderHovered(true)}
+                onMouseLeave={() => setIsHeaderHovered(false)}
+                className={`bg-white/60 backdrop-blur-lg flex items-center justify-between transition-all duration-300 hover:bg-white ${isScrolled ? 'rounded-full shadow-lg px-6 py-2' : 'px-6 sm:px-12 lg:px-24 py-4 w-full shadow-sm'}`}
+            >
                 {/* Logo */}
                 <div className="flex-shrink-0">
                     <button onClick={() => navigateTo('home')} className="flex items-center transition-transform duration-300 hover:scale-105" title="Ir al Inicio">
@@ -116,15 +136,15 @@ const Header: React.FC = () => {
                          <div key={item.name} className="relative group" ref={item.name === 'PRODUCTOS' ? productsMenuRef : null}>
                             <button
                                 onClick={() => item.name === 'PRODUCTOS' ? setIsProductsOpen(prev => !prev) : navigateTo(item.page as any)}
-                                className="text-base font-semibold text-[var(--color-dark)] hover:text-[var(--color-primary)] transition-colors duration-300 pb-2"
+                                className="text-base font-semibold text-[var(--color-dark)] hover:text-[var(--color-primary)] transition-colors duration-300 py-1"
                                 title={`Alt + ${item.accessKey}`}
                                 accessKey={item.accessKey}
                             >
                                 {item.name}
-                                 <span className="absolute bottom-0 left-0 w-full h-0.5 bg-[var(--color-primary)] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
+                                 <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-[var(--color-primary)] transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out"></span>
                             </button>
                             {item.name === 'PRODUCTOS' && isProductsOpen && (
-                                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 bg-white rounded-md shadow-xl py-2 z-50 ring-1 ring-black ring-opacity-5">
+                                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 bg-white rounded-md shadow-xl py-2 z-[1001] ring-1 ring-black ring-opacity-5">
                                      {categories.map(cat => (
                                          <a key={cat.id} href="#" onClick={(e) => { e.preventDefault(); handleProductNavigation(cat.id); }} className="block px-4 py-3 text-sm text-[var(--color-text)] hover:bg-gray-100 hover:text-[var(--color-dark)] transition-colors">{cat.name}</a>
                                      ))}
@@ -158,7 +178,7 @@ const Header: React.FC = () => {
                                     {currentUser.firstName.toUpperCase()}
                                 </button>
                                 {isUserMenuOpen && (
-                                    <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-md shadow-xl py-1 z-50 ring-1 ring-black ring-opacity-5">
+                                    <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-md shadow-xl py-1 z-[1001] ring-1 ring-black ring-opacity-5">
                                         <button onClick={() => { navigateTo('account'); setIsUserMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-[var(--color-text)] hover:bg-gray-100 transition-colors">MI CUENTA</button>
                                         <button onClick={() => { logout(); setIsUserMenuOpen(false); }} className="block w-full text-left px-4 py-2 text-sm text-[var(--color-text)] hover:bg-gray-100 transition-colors">CERRAR SESIÓN</button>
                                     </div>

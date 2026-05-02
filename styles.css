@@ -11,16 +11,17 @@ body {
 /* --- HATO GRANDE E-COMMERCE STYLES --- */
 /* All styles below will only apply to elements inside the .hatogrande-app container */
 .hatogrande-app {
-    /* Hato Grande Color Palette based on user's image */
-    --color-primary: #D9B814;      /* Main Yellow */
-    --color-secondary: #594302;     /* Dark Brown/Olive */
-    --color-accent: #D9A50B;       /* Darker Yellow/Gold */
-    --color-dark: #403434;         /* Dark Gray/Brown for titles */
-    --color-light-gray: #D9D1D0;   /* Light Gray for text on dark backgrounds */
-    --color-text: #403434;         /* Dark Gray/Brown for body text */
-    --color-background: #e5ddc1;   /* Light yellow background */
+    /* Hato Grande Refined Color Palette */
+    --color-primary: #D9B814;      /* Main Brand Yellow */
+    --color-secondary: #4a3728;     /* Warm Deep Brown */
+    --color-accent: #D9A50B;       /* Brand Accent Gold */
+    --color-dark: #2a201a;         /* Near Black Brown for titles */
+    --color-text: #4a3728;         /* Warm Brown for body text */
+    --color-bg-main: #fffef9;      /* Cleanest Cream Background */
+    --color-bg-soft: #f5f0e1;      /* Soft Warm Beige */
+    --color-bg-brand: #e5ddc1;     /* Classic Hato Grande Beige */
     
-    background-color: var(--color-background);
+    background-color: var(--color-bg-main);
     color: var(--color-text);
 }
 
@@ -31,7 +32,6 @@ body {
 .hatogrande-app h5,
 .hatogrande-app h6 {
     font-family: 'Montserrat', sans-serif;
-    color: var(--color-dark);
 }
 
 /* Custom Scrollbar for Hato Grande */

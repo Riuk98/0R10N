@@ -79,7 +79,7 @@ function App() {
 
     // Effect to manage global body styles based on the current app view
     useEffect(() => {
-        const HATO_GRANDE_BG_COLOR = '#e5ddc1';
+        const HATO_GRANDE_BG_COLOR = '#fdfaf3';
         const isHatoGrandeActive = currentPage !== 'orion-login' && !isOrionLoggedIn && !showOrionPreloader && !isShowingLoginPreloader;
 
         if (isHatoGrandeActive) {
@@ -371,13 +371,14 @@ function App() {
     
     const GlobalStyles =  `
         :root {
-            --color-primary: #D9B814;      /* Main Yellow */
-            --color-secondary: #594302;     /* Dark Brown/Olive */
-            --color-accent: #D9A50B;       /* Darker Yellow/Gold */
-            --color-dark: #403434;         /* Dark Gray/Brown for titles */
-            --color-light-gray: #D9D1D0;   /* Light Gray for text on dark backgrounds */
-            --color-text: #403434;         /* Dark Gray/Brown for body text */
-            --color-background: #e5ddc1;   /* Light yellow background */
+            --color-primary: #D9B814;      /* Main Brand Yellow */
+            --color-secondary: #4a3728;     /* Warm Deep Brown */
+            --color-accent: #D9A50B;       /* Brand Accent Gold */
+            --color-dark: #2a201a;         /* Near Black Brown for titles */
+            --color-text: #4a3728;         /* Warm Brown for body text */
+            --color-bg-main: #fdfaf3;      /* Cleanest Cream Background */
+            --color-bg-soft: #f5f0e1;      /* Soft Warm Beige */
+            --color-bg-brand: #e5ddc1;     /* Classic Hato Grande Beige */
         }
     `;
 

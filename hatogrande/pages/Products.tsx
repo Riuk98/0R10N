@@ -33,25 +33,27 @@ const ProductCard: React.FC<{ product: any }> = ({ product }) => {
                 <p className="text-[var(--color-text)] opacity-80 text-sm mt-1">{product.options.type}: {product.options.values.join(', ')}</p>
                 <p className="text-xl font-bold text-[var(--color-secondary)] mt-4">${product.valorUnitario.toLocaleString('es-CO')}</p>
                 
-                <div className="mt-auto pt-4 flex items-center gap-2">
-                     <button onClick={() => showProductDetail(product)} className="flex-1 text-center px-4 py-2 border-2 border-[var(--color-secondary)] text-[var(--color-secondary)] font-bold rounded hover:bg-[var(--color-secondary)] hover:text-[var(--color-light-gray)] transition-colors text-sm">
-                        Ver más
-                    </button>
-                    <button 
-                        onClick={handleAddToCart} 
-                        className={`flex-1 text-center px-4 py-2 font-bold rounded transition-all duration-300 text-sm flex items-center justify-center gap-1 ${isAdded ? 'bg-green-500 text-white' : 'bg-[var(--color-primary)] text-[var(--color-dark)] hover:bg-[var(--color-accent)]'}`}
-                    >
-                        {isAdded ? (
-                            <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                </svg>
-                                ¡Añadido!
-                            </>
-                        ) : (
-                            'Añadir'
-                        )}
-                    </button>
+                <div className="mt-auto pt-4">
+                    <div className="flex items-center gap-2 bg-[#998975] p-2 rounded-xl shadow-inner">
+                        <button onClick={() => showProductDetail(product)} className="flex-1 text-center px-4 py-2 border-2 border-[var(--color-bg-soft)] text-white font-bold rounded hover:bg-[var(--color-bg-soft)] hover:text-[#998975] transition-colors text-sm">
+                            Ver más
+                        </button>
+                        <button 
+                            onClick={handleAddToCart} 
+                            className={`flex-1 text-center px-4 py-2 font-bold rounded transition-all duration-300 text-sm flex items-center justify-center gap-1 ${isAdded ? 'bg-green-500 text-white' : 'bg-[#412b0c] text-white hover:bg-[#2f1f08] shadow-md'}`}
+                        >
+                            {isAdded ? (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                    ¡Añadido!
+                                </>
+                            ) : (
+                                'Añadir'
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

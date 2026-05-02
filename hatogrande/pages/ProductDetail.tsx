@@ -56,8 +56,8 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
                         </div>
 
                         {/* Quantity & Add to Cart */}
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="flex items-center border rounded-full">
+                        <div className="flex items-center gap-4 mb-6 bg-[#998975] p-2 rounded-full shadow-inner">
+                            <div className="flex items-center bg-white rounded-full">
                                 <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-4 py-2 text-xl font-bold">-</button>
                                 <span className="px-5 text-lg font-semibold">{quantity}</span>
                                 <button onClick={() => setQuantity(q => q + 1)} className="px-4 py-2 text-xl font-bold">+</button>
@@ -65,7 +65,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
                             <button
                                 onClick={handleAddToCart}
                                 className={`flex-1 py-3 px-6 font-bold rounded-full transition-all duration-300 flex items-center justify-center gap-2 ${
-                                    isAdded ? 'bg-green-500 text-white' : 'bg-[var(--color-primary)] text-[var(--color-dark)] hover:bg-[var(--color-accent)]'
+                                    isAdded ? 'bg-green-500 text-white' : 'bg-[#412b0c] text-white hover:bg-[var(--color-dark)]'
                                 }`}
                             >
                                 {isAdded ? (
